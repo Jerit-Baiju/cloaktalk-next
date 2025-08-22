@@ -27,6 +27,11 @@ export default function Home() {
             <a href='#contact' className='text-gray-600 hover:text-pink-500 transition-colors'>
               Contact
             </a>
+            <a
+              href='/login'
+              className='bg-gradient-to-r from-pink-500 to-pink-600 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5'>
+              Sign In
+            </a>
           </div>
         </div>
       </nav>
@@ -55,8 +60,9 @@ export default function Home() {
 
               {/* CTA Buttons */}
               <div className='flex flex-col sm:flex-row gap-3 sm:gap-4'>
-                <button
-                  className='group relative px-6 py-3 sm:px-8 sm:py-4 bg-gradient-to-r from-pink-500 to-pink-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1'
+                <a
+                  href='/login'
+                  className='group relative px-6 py-3 sm:px-8 sm:py-4 bg-gradient-to-r from-pink-500 to-pink-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 text-center'
                   onMouseEnter={() => setIsHovered(true)}
                   onMouseLeave={() => setIsHovered(false)}>
                   <span className='relative z-10 flex items-center justify-center text-sm sm:text-base'>
@@ -70,7 +76,7 @@ export default function Home() {
                     </svg>
                   </span>
                   <div className='absolute inset-0 bg-gradient-to-r from-pink-600 to-pink-700 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300'></div>
-                </button>
+                </a>
 
                 <button className='px-6 py-3 sm:px-8 sm:py-4 border-2 border-gray-300 text-gray-700 font-semibold rounded-xl hover:border-pink-500 hover:text-pink-500 transition-all duration-300 text-sm sm:text-base'>
                   Learn More
