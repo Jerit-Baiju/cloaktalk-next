@@ -1,6 +1,7 @@
 'use client';
 
 import { useChat } from '@/contexts/ChatContext';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import React from 'react';
 import { BsThreeDotsVertical } from 'react-icons/bs';
@@ -25,46 +26,51 @@ const ChatHeader: React.FC = () => {
   };
 
   return (
-    <div className='bg-gradient-to-r from-pink-500 to-rose-600 p-4 border-b border-gray-100'>
-      <div className='flex items-center justify-between'>
-        <div className='flex items-center space-x-3'>
-          <div className='w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm'>
+    <div className='relative z-10 border-b border-neutral-800/80 bg-neutral-950/80 backdrop-blur supports-[backdrop-filter]:bg-neutral-950/60'>
+      <div className='px-4 sm:px-6 py-3 flex items-center justify-between'>
+        <div className='flex items-center gap-3 min-w-0'>
+          <div className='relative w-11 h-11 rounded-xl bg-gradient-to-br from-pink-500/30 to-fuchsia-600/30 flex items-center justify-center ring-1 ring-pink-500/40 overflow-hidden'>
             {currentChat.avatar ? (
-              <img src={currentChat.avatar} alt={currentChat.name} className='w-8 h-8 rounded-full' />
+              <Image src={currentChat.avatar} alt={currentChat.name} width={28} height={28} className='w-7 h-7 object-contain opacity-90' />
             ) : (
-              <div className='w-8 h-8 bg-white/40 rounded-full flex items-center justify-center'>
-                <span className='text-white text-sm font-semibold'>{currentChat.name.charAt(0)}</span>
-              </div>
+              <span className='text-pink-200 font-semibold text-sm'>{currentChat.name.charAt(0)}</span>
+            )}
+            {currentChat.isOnline && (
+              <span className='absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 ring-2 ring-neutral-950'></span>
             )}
           </div>
-          <div>
-            <h2 className='font-semibold text-white text-lg'>{currentChat.name}</h2>
-            {currentChat.isOnline && (
-              <div className='text-xs text-pink-100 flex items-center'>
-                <div className='w-2 h-2 bg-green-400 rounded-full mr-1.5'></div>
-                online now
-              </div>
-            )}
+          <div className='flex flex-col min-w-0'>
+            <h2 className='text-sm font-medium tracking-tight text-neutral-100 truncate'>{currentChat.name}</h2>
+            <div className='flex items-center gap-2'>
+              {currentChat.isOnline ? (
+                <span className='flex items-center gap-1 text-[11px] text-neutral-500'>
+                  <span className='w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse'></span>
+                  Live now
+                </span>
+              ) : (
+                <span className='text-[11px] text-neutral-600'>Offline</span>
+              )}
+              <span className='hidden sm:inline text-[10px] uppercase tracking-wider text-neutral-600'>Anonymous</span>
+            </div>
           </div>
         </div>
-
-        <div className='flex items-center space-x-2'>
-          <button
-            onClick={handleExit}
-            className='w-10 h-10 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors'
-            title='Exit Chat'>
-            <IoMdExit className='text-white text-lg' />
-          </button>
-
+        <div className='flex items-center gap-2'>
           <button
             onClick={handleNext}
-            className='w-10 h-10 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors'
+            className='group relative w-9 h-9 rounded-lg border border-neutral-800 bg-neutral-900/60 flex items-center justify-center text-neutral-400 hover:text-neutral-100 hover:border-neutral-600 transition-colors'
             title='Next Chat'>
-            <MdNavigateNext className='text-white text-lg' />
+            <MdNavigateNext className='text-lg' />
           </button>
-
-          <button className='w-10 h-10 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors'>
-            <BsThreeDotsVertical className='text-white text-lg' />
+          <button
+            onClick={handleExit}
+            className='group relative w-9 h-9 rounded-lg border border-neutral-800 bg-neutral-900/60 flex items-center justify-center text-neutral-400 hover:text-pink-300 hover:border-pink-500/60 transition-colors'
+            title='Exit'>
+            <IoMdExit className='text-base' />
+          </button>
+          <button
+            className='group relative w-9 h-9 rounded-lg border border-neutral-800 bg-neutral-900/60 flex items-center justify-center text-neutral-500 hover:text-neutral-200 hover:border-neutral-600 transition-colors'
+            title='More'>
+            <BsThreeDotsVertical className='text-base' />
           </button>
         </div>
       </div>

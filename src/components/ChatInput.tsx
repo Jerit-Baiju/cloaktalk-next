@@ -69,8 +69,8 @@ const ChatInput: React.FC = () => {
   };
 
   return (
-    <div className="bg-white/80 backdrop-blur-sm border-t border-gray-200/50 px-4 py-3 sm:px-6">
-      <div className="max-w-4xl mx-auto">
+    <div className="relative z-10 border-t border-neutral-800/80 bg-neutral-950/70 backdrop-blur supports-[backdrop-filter]:bg-neutral-950/50 px-3 py-3 sm:px-6">
+      <div className="max-w-3xl mx-auto">
         {/* Hidden file input */}
         <input
           ref={fileInputRef}
@@ -84,14 +84,14 @@ const ChatInput: React.FC = () => {
         {/* Selected Files Preview */}
         {selectedFiles.length > 0 && (
           <div className="mb-3">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3">
+            <div className="rounded-xl bg-neutral-900/70 border border-neutral-800 p-3">
               <div className="flex flex-wrap gap-2">
                 {selectedFiles.map((file, index) => (
-                  <div key={index} className="flex items-center bg-gray-50 rounded-lg px-3 py-2 text-sm">
-                    <span className="text-gray-700 mr-2 max-w-32 truncate">{file.name}</span>
+                  <div key={index} className="flex items-center bg-neutral-800/70 border border-neutral-700 rounded-lg px-3 py-1.5 text-xs text-neutral-300">
+                    <span className="mr-2 max-w-40 truncate" title={file.name}>{file.name}</span>
                     <button
                       onClick={() => removeFile(index)}
-                      className="text-gray-400 hover:text-red-500 transition-colors"
+                      className="text-neutral-500 hover:text-pink-400 transition-colors"
                     >
                       ×
                     </button>
@@ -103,12 +103,12 @@ const ChatInput: React.FC = () => {
         )}
 
         {/* Main Input Container */}
-        <div className="rounded-2xl shadow-sm border border-gray-200/50 p-2">
-          <div className="flex items-center justify-center space-x-2">
+        <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 backdrop-blur p-2">
+          <div className="flex items-center justify-center gap-2">
             {/* Attachment Button */}
             <button
               onClick={handleAttachmentClick}
-              className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-gray-700"
+              className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-colors bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-neutral-200 border border-neutral-700"
             >
               <HiPaperClip className="text-lg" />
             </button>
@@ -121,7 +121,7 @@ const ChatInput: React.FC = () => {
                 onChange={(e) => setMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Type a message..."
-                className="w-full px-3 py-2 bg-transparent border-none resize-none focus:outline-none text-gray-800 placeholder-gray-500 text-sm leading-5"
+                className="w-full px-3 py-2 bg-transparent border-none resize-none focus:outline-none text-neutral-100 placeholder-neutral-500 text-sm leading-5"
                 rows={1}
                 style={{
                   minHeight: '36px',
@@ -130,18 +130,18 @@ const ChatInput: React.FC = () => {
               />
               {/* Character count for long messages */}
               {message.length > 500 && (
-                <div className="absolute bottom-1 right-2 text-xs text-gray-400">
+                <div className="absolute bottom-1 right-2 text-[10px] text-neutral-500">
                   {message.length}/1000
                 </div>
               )}
             </div>
 
             {/* Right Actions */}
-            <div className="flex items-center space-x-1">
+            <div className="flex items-center gap-1.5">
               {/* Emoji Button */}
               <button
                 onClick={() => console.log('Emoji picker')}
-                className="flex-shrink-0 w-9 h-9 rounded-xl bg-gray-50 hover:bg-gray-100 flex items-center justify-center transition-all duration-200 text-gray-600 hover:text-gray-700"
+                className="flex-shrink-0 w-9 h-9 rounded-xl bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition-colors text-neutral-400 hover:text-neutral-200 border border-neutral-700"
               >
                 <HiOutlineEmojiHappy className="text-lg" />
               </button>
@@ -150,17 +150,17 @@ const ChatInput: React.FC = () => {
               {message.trim() || selectedFiles.length > 0 ? (
                 <button
                   onClick={handleSend}
-                  className="flex-shrink-0 w-9 h-9 rounded-xl bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700 text-white flex items-center justify-center transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95"
+                  className="flex-shrink-0 w-9 h-9 rounded-xl bg-gradient-to-r from-pink-500 via-rose-500 to-fuchsia-500 hover:from-pink-500 hover:to-rose-600 text-white flex items-center justify-center transition-transform duration-200 shadow-sm hover:shadow-md hover:scale-105 active:scale-95"
                 >
                   <IoSend className="text-base ml-0.5" />
                 </button>
               ) : (
                 <button
                   onClick={handleVoiceRecord}
-                  className={`flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 ${
+                  className={`flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-colors duration-200 border ${
                     isRecording 
-                      ? 'bg-red-500 text-white shadow-lg animate-pulse' 
-                      : 'bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-gray-700'
+                      ? 'bg-red-600 text-white border-red-500 shadow-inner animate-pulse' 
+                      : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-neutral-200 border-neutral-700'
                   }`}
                 >
                   <HiMicrophone className="text-lg" />
@@ -172,10 +172,10 @@ const ChatInput: React.FC = () => {
 
         {/* Recording Indicator */}
         {isRecording && (
-          <div className="mt-2 flex items-center justify-center space-x-2">
-            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-            <span className="text-sm text-red-600 font-medium">Recording...</span>
-            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+          <div className="mt-2 flex items-center justify-center gap-2 text-[11px] text-red-400">
+            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+            <span className="font-medium">Recording…</span>
+            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
           </div>
         )}
       </div>
