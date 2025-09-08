@@ -89,8 +89,8 @@ export default function WelcomePage() {
       {/* Header */}
       <header className="relative z-10 flex items-center justify-between px-5 py-4">
         <div className="flex items-center gap-3 cursor-pointer" onClick={goHome}>
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center shadow-sm shadow-pink-500/30">
-            <Image src="/logo.png" alt="CloakTalk" width={22} height={22} />
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center">
+            <Image src="/logo.png" alt="CloakTalk" width={44} height={44} />
           </div>
           <div className="flex flex-col leading-tight">
             <span className="font-semibold tracking-tight text-neutral-50">CloakTalk</span>
@@ -99,25 +99,6 @@ export default function WelcomePage() {
         </div>
         <div className="flex items-center gap-4">
           <button onClick={goHome} className="text-sm text-neutral-400 hover:text-neutral-200 transition-colors">Home</button>
-          {isAuthenticated && user ? (
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2 rounded-full bg-neutral-800/60 backdrop-blur px-3 py-1.5 border border-neutral-700/60">
-                {user.profile_picture && (
-                  <Image src={user.profile_picture} alt={user.first_name} width={20} height={20} className="rounded-full object-cover" />
-                )}
-                <span className="text-xs font-medium text-neutral-300">{user.first_name}</span>
-              </div>
-              <button
-                onClick={logout}
-                className="text-xs font-medium text-neutral-400 hover:text-neutral-200 px-3 py-1.5 rounded-full border border-neutral-700/70 hover:border-neutral-500 transition-colors"
-              >Sign out</button>
-            </div>
-          ) : (
-            <button
-              onClick={goLogin}
-              className="text-sm font-medium rounded-full bg-neutral-800/70 border border-neutral-700/70 px-4 py-2 hover:bg-neutral-700/70 hover:border-neutral-600 transition-colors"
-            >Sign in</button>
-          )}
         </div>
       </header>
 
@@ -180,7 +161,7 @@ export default function WelcomePage() {
           {steps.map((s, i) => (
             <li key={s.title} className="group relative rounded-2xl border border-neutral-800 bg-neutral-900/50 p-5 flex flex-col gap-3">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-mono tracking-wide text-pink-300/80">{`0${i+1}`}</span>
+                <span className="text-[11px] font-mono tracking-wide text-pink-300/80">{`0${i + 1}`}</span>
                 <span className="w-2 h-2 rounded-full bg-pink-500/60 group-hover:bg-pink-400 transition-colors" />
               </div>
               <h3 className="font-medium text-neutral-100 tracking-tight">{s.title}</h3>
