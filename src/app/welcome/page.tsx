@@ -1,275 +1,271 @@
-'use client'
+'use client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useEffect, useState } from 'react';
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
-const page = () => {
-    const [isHovered, setIsHovered] = useState(false);
-    const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
-    const [showMobileMenu, setShowMobileMenu] = useState(false);
-    const { user, logout, loading, isAuthenticated } = useAuth();
+// Reuse availability window (local time)
+const OPEN_HOUR_START = 20; // 8 PM
+const OPEN_HOUR_END = 21;   // 9 PM
 
-    const messages = [
-        "Connect anonymously with your campus community",
-        "Share thoughts safely in your college space",
-        "Build meaningful connections across departments",
-        "Express yourself freely in a secure environment"
-    ];
+export default function WelcomePage() {
+  const { user, isAuthenticated, logout } = useAuth();
+  const router = useRouter();
+  const [now, setNow] = useState<Date>(() => new Date());
+  // hoverCta removed (unused)
+  const [hoverStart, setHoverStart] = useState(false);
 
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setCurrentMessageIndex((prev) => (prev + 1) % messages.length);
-        }, 3000);
-        return () => clearInterval(interval);
-    }, []);
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const isOpen = useMemo(() => {
+    const h = now.getHours();
+    return h >= OPEN_HOUR_START && h < OPEN_HOUR_END;
+  }, [now]);
+
+  const msUntilNextOpen = useMemo(() => {
+    if (isOpen) return 0;
+    const next = new Date(now);
+    if (now.getHours() >= OPEN_HOUR_END) next.setDate(next.getDate() + 1);
+    next.setHours(OPEN_HOUR_START, 0, 0, 0);
+    return next.getTime() - now.getTime();
+  }, [isOpen, now]);
+
+  const countdown = useMemo(() => {
+    if (msUntilNextOpen <= 0) return 'Starting now';
+    const total = Math.floor(msUntilNextOpen / 1000);
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = total % 60;
+    const parts = [] as string[];
+    if (h) parts.push(`${h}h`);
+    if (h || m) parts.push(`${m}m`);
+    parts.push(`${s}s`);
+    return parts.join(' ');
+  }, [msUntilNextOpen]);
+
+  const startChat = useCallback(() => {
+    if (!isAuthenticated) {
+      router.push('/login');
+      return;
+    }
+    const uuid = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : 'anonymous-' + Math.random().toString(36).slice(2, 11);
+    router.push(`/chat/${uuid}`);
+  }, [isAuthenticated, router]);
+
+  const goHome = useCallback(() => router.push('/'), [router]);
+  const goLogin = useCallback(() => router.push('/login'), [router]);
+
+  const steps = [
+    { title: 'Authenticate (Once)', text: 'Quick campus email sign-in. We never show it to others.' },
+    { title: 'Enter the Window', text: 'Drop in between 8–9 PM local time. The room opens for everyone simultaneously.' },
+    { title: 'Pair & Converse', text: 'You get matched or can move between ephemeral chats freely.' },
+    { title: 'It Vanishes', text: 'After the hour, sessions close—no lingering history. You return tomorrow.' }
+  ];
+
+  const features = [
+    { icon: '🔒', title: 'True Anonymity', text: 'No display names. Presence only while you are active.' },
+    { icon: '🎓', title: 'Campus Verified', text: 'Access limited to real students through email verification.' },
+    { icon: '⚡', title: 'Frictionless', text: 'One tap to start; no profiles, bios, or setup clutter.' },
+    { icon: '🕘', title: 'One Hour Focus', text: 'Scarcity keeps it intentional, not another endless feed.' },
+    { icon: '🧭', title: 'Guided Norms', text: 'Light prompts encourage helpful, respectful exchanges.' },
+    { icon: '🛡️', title: 'Safety Layer', text: 'Automated abuse filters + rapid escalation signals.' }
+  ];
 
   return (
-    <div className='max-sm:min-h-screen md:h-screen overflow-hidden bg-gradient-to-br from-rose-50 via-white to-pink-50 relative'>
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-pink-200 to-rose-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-purple-200 to-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
-        <div className="absolute top-40 left-40 w-80 h-80 bg-gradient-to-br from-yellow-200 to-pink-200 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
+    <div className="min-h-screen bg-neutral-950 text-neutral-100 relative overflow-x-hidden selection:bg-pink-500/30">
+      {/* Background aesthetics */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-40 -left-20 w-[55rem] h-[55rem] bg-[radial-gradient(circle_at_center,rgba(236,72,153,0.18),transparent_70%)]" />
+        <div className="absolute bottom-0 right-0 w-[48rem] h-[48rem] bg-[radial-gradient(circle_at_center,rgba(217,70,239,0.15),transparent_70%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:46px_46px] opacity-[0.05]" />
+        <div className="absolute inset-0 backdrop-[mask-image:radial-gradient(circle_at_center,black,transparent_75%)]" />
       </div>
 
-      {/* Main Container */}
-      <div className='h-full flex flex-col relative z-10'>
-        {/* Navigation */}
-        <nav className='px-4 py-4 sm:px-6 lg:px-8 bg-white/80 backdrop-blur-md border-b border-gray-100/50'>
-          <div className='flex justify-between items-center max-w-7xl mx-auto'>
-            {/* Logo */}
-            <div className='flex items-center space-x-3'>
-              <div className='w-10 h-10 bg-gradient-to-br from-pink-500 to-rose-600 rounded-xl flex items-center justify-center shadow-lg'>
-                <img src='/logo.png' className='w-6 h-6' alt="Cloak Talk Logo" />
-              </div>
-              <div>
-                <span className='text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent'>
-                  CloakTalk
-                </span>
-                <div className='text-xs text-gray-500 font-medium'>Your Campus, Anonymously</div>
-              </div>
-            </div>
-
-            {/* Desktop Navigation */}
-            <div className='hidden lg:flex items-center space-x-8'>
-              <a href='#features' className='text-gray-600 hover:text-pink-600 transition-colors duration-200 font-medium'>
-                Features
-              </a>
-              <a href='#safety' className='text-gray-600 hover:text-pink-600 transition-colors duration-200 font-medium'>
-                Safety
-              </a>
-              <a href='#community' className='text-gray-600 hover:text-pink-600 transition-colors duration-200 font-medium'>
-                Community
-              </a>
-
-              {!loading && (isAuthenticated && user ? (
-                <div className='flex items-center space-x-3'>
-                  <div className='flex items-center space-x-2 bg-gray-100 rounded-full px-3 py-2'>
-                    {user.profile_picture && <img src={user.profile_picture} alt={user.first_name} className='w-6 h-6 rounded-full' />}
-                    <span className='text-sm font-medium text-gray-700'>
-                      {user.first_name}
-                    </span>
-                  </div>
-                  <button
-                    onClick={logout}
-                    className='bg-gradient-to-r from-red-500 to-red-600 text-white px-4 py-2 rounded-xl hover:shadow-lg transition-all duration-300 transform hover:scale-105 font-medium text-sm'>
-                    Sign Out
-                  </button>
-                </div>
-              ) : (
-                <a
-                  href='/login'
-                  className='bg-gradient-to-r from-pink-500 to-rose-600 text-white px-6 py-2.5 rounded-xl hover:shadow-lg transition-all duration-300 transform hover:scale-105 font-semibold text-sm'>
-                  Get Started
-                </a>
-              ))}
-            </div>
-
-            {/* Mobile Menu Button */}
-            <button 
-              onClick={() => setShowMobileMenu(!showMobileMenu)}
-              className='lg:hidden p-2 text-gray-600 hover:text-pink-600 transition-colors'
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={showMobileMenu ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
-              </svg>
-            </button>
+      {/* Header */}
+      <header className="relative z-10 flex items-center justify-between px-5 py-4">
+        <div className="flex items-center gap-3 cursor-pointer" onClick={goHome}>
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center shadow-sm shadow-pink-500/30">
+            <Image src="/logo.png" alt="CloakTalk" width={22} height={22} />
           </div>
+          <div className="flex flex-col leading-tight">
+            <span className="font-semibold tracking-tight text-neutral-50">CloakTalk</span>
+            <span className="text-[10px] uppercase tracking-[0.18em] text-neutral-400">Anonymous Campus Chat</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-4">
+          <button onClick={goHome} className="text-sm text-neutral-400 hover:text-neutral-200 transition-colors">Home</button>
+          {isAuthenticated && user ? (
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 rounded-full bg-neutral-800/60 backdrop-blur px-3 py-1.5 border border-neutral-700/60">
+                {user.profile_picture && (
+                  <Image src={user.profile_picture} alt={user.first_name} width={20} height={20} className="rounded-full object-cover" />
+                )}
+                <span className="text-xs font-medium text-neutral-300">{user.first_name}</span>
+              </div>
+              <button
+                onClick={logout}
+                className="text-xs font-medium text-neutral-400 hover:text-neutral-200 px-3 py-1.5 rounded-full border border-neutral-700/70 hover:border-neutral-500 transition-colors"
+              >Sign out</button>
+            </div>
+          ) : (
+            <button
+              onClick={goLogin}
+              className="text-sm font-medium rounded-full bg-neutral-800/70 border border-neutral-700/70 px-4 py-2 hover:bg-neutral-700/70 hover:border-neutral-600 transition-colors"
+            >Sign in</button>
+          )}
+        </div>
+      </header>
 
-          {/* Mobile Menu */}
-          {showMobileMenu && (
-            <div className='lg:hidden mt-4 pb-4 space-y-3 border-t border-gray-100 pt-4'>
-              <a href='#features' className='block text-gray-600 hover:text-pink-600 transition-colors font-medium'>Features</a>
-              <a href='#safety' className='block text-gray-600 hover:text-pink-600 transition-colors font-medium'>Safety</a>
-              <a href='#community' className='block text-gray-600 hover:text-pink-600 transition-colors font-medium'>Community</a>
-              {!loading && !isAuthenticated && (
-                <a href='/login' className='block bg-gradient-to-r from-pink-500 to-rose-600 text-white px-6 py-3 rounded-xl text-center font-semibold'>
-                  Get Started
-                </a>
+      {/* Hero */}
+      <section className="relative z-10 px-6 pt-10 pb-24 max-w-6xl mx-auto">
+        <div className="max-w-3xl space-y-8">
+          <div className="inline-flex items-center gap-2 rounded-full border border-neutral-700/60 bg-neutral-900/60 px-4 py-2 text-[11px] tracking-wide text-neutral-300">
+            <span className="w-2 h-2 rounded-full bg-pink-500" /> Built for real students only
+          </div>
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-semibold tracking-tight leading-[1.05]">
+            The nightly <span className="bg-gradient-to-r from-pink-400 via-fuchsia-400 to-rose-400 bg-clip-text text-transparent">anonymous hour</span> your campus actually needs.
+          </h1>
+          <p className="text-neutral-400 text-lg leading-relaxed max-w-2xl">
+            CloakTalk creates a deliberate one‑hour space each evening where students can seek help, share thoughts, de‑stress, and make authentic low‑pressure connections—without the baggage of identity.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 pt-2">
+            {isOpen ? (
+              <button
+                onClick={startChat}
+                onMouseEnter={() => setHoverStart(true)}
+                onMouseLeave={() => setHoverStart(false)}
+                className="group relative overflow-hidden rounded-full px-9 py-4 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950"
+              >
+                <span className="absolute inset-0 bg-gradient-to-r from-pink-500 via-rose-500 to-fuchsia-500 opacity-90 group-hover:opacity-100 transition-opacity" />
+                <span className="absolute inset-0 blur-xl bg-pink-500/40 group-hover:bg-pink-500/50 transition-colors" />
+                <span className="relative flex items-center justify-center gap-2 text-neutral-50">
+                  Enter Live Window
+                  <svg className={`w-4 h-4 transition-transform ${hoverStart ? 'translate-x-1' : ''}`} stroke="currentColor" strokeWidth={1.7} fill="none" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M5 12h14" /><path d="M13 6l6 6-6 6" /></svg>
+                </span>
+              </button>
+            ) : (
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="rounded-full bg-neutral-800/70 border border-neutral-700/70 px-5 py-3 text-sm font-medium text-neutral-300 font-mono">
+                  Next session: <span className="text-pink-300">{countdown}</span>
+                </div>
+                {!isAuthenticated && (
+                  <button
+                    onClick={goLogin}
+                    className="rounded-full border border-neutral-700/70 bg-neutral-800/60 px-6 py-3 text-sm font-medium text-neutral-300 hover:text-neutral-100 hover:border-neutral-600 transition-colors"
+                  >Pre‑authenticate</button>
+                )}
+              </div>
+            )}
+            <button
+              onClick={goHome}
+              className="relative rounded-full border border-neutral-700/70 px-8 py-4 text-sm font-medium text-neutral-300 hover:text-neutral-100 hover:border-neutral-500 transition-colors"
+            >Homepage</button>
+          </div>
+          <p className="text-[11px] text-neutral-600 max-w-sm pt-4">No endless scrolling. No algorithmic amplification. Just human, time‑boxed presence.</p>
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section id="how" className="relative z-10 px-6 pb-24 max-w-6xl mx-auto">
+        <div className="mb-10">
+          <h2 className="text-xl font-semibold tracking-wide text-neutral-200 mb-2">How it works</h2>
+          <div className="h-px w-full bg-gradient-to-r from-transparent via-neutral-700/60 to-transparent" />
+        </div>
+        <ol className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {steps.map((s, i) => (
+            <li key={s.title} className="group relative rounded-2xl border border-neutral-800 bg-neutral-900/50 p-5 flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-mono tracking-wide text-pink-300/80">{`0${i+1}`}</span>
+                <span className="w-2 h-2 rounded-full bg-pink-500/60 group-hover:bg-pink-400 transition-colors" />
+              </div>
+              <h3 className="font-medium text-neutral-100 tracking-tight">{s.title}</h3>
+              <p className="text-sm text-neutral-400 leading-relaxed">{s.text}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      {/* Features */}
+      <section id="features" className="relative z-10 px-6 pb-24 max-w-6xl mx-auto">
+        <div className="mb-10 flex items-end justify-between flex-wrap gap-6">
+          <div>
+            <h2 className="text-xl font-semibold tracking-wide text-neutral-200 mb-2">Why it feels different</h2>
+            <div className="h-px w-full bg-gradient-to-r from-transparent via-neutral-700/60 to-transparent" />
+          </div>
+          <div className="text-[11px] text-neutral-500 max-w-xs">Everything is intentionally minimal so the social pressure stays low and intent stays high.</div>
+        </div>
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {features.map(f => (
+            <div key={f.title} className="relative rounded-2xl border border-neutral-800 bg-neutral-900/40 p-6 flex flex-col gap-4 hover:border-neutral-700/80 transition-colors">
+              <div className="flex items-center gap-3">
+                <span className="text-xl" aria-hidden>{f.icon}</span>
+                <h3 className="font-medium tracking-tight text-neutral-100">{f.title}</h3>
+              </div>
+              <p className="text-sm text-neutral-400 leading-relaxed">{f.text}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Safety & Guidelines */}
+      <section id="safety" className="relative z-10 px-6 pb-28 max-w-6xl mx-auto">
+        <div className="mb-10">
+          <h2 className="text-xl font-semibold tracking-wide text-neutral-200 mb-2">Safety & ethos</h2>
+          <div className="h-px w-full bg-gradient-to-r from-transparent via-neutral-700/60 to-transparent" />
+        </div>
+        <div className="grid gap-8 lg:grid-cols-3">
+          <div className="lg:col-span-2 space-y-6">
+            <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-6 space-y-4">
+              <p className="text-sm text-neutral-400 leading-relaxed">We want candid conversation—not harassment. Automated classifiers and community signals reduce toxicity. Flagged content is reviewed. Repeat abuse leads to silent removal of access.</p>
+              <ul className="grid sm:grid-cols-2 gap-3 text-[13px] text-neutral-300">
+                <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-pink-500" /> No doxxing / real‑world targeting</li>
+                <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-pink-500" /> No hate or discrimination</li>
+                <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-pink-500" /> No explicit sexual content</li>
+                <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-pink-500" /> Support peers respectfully</li>
+              </ul>
+            </div>
+            <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+              <div className="space-y-1">
+                <h3 className="font-medium tracking-tight text-neutral-100">Ready for tonight?</h3>
+                <p className="text-sm text-neutral-400">Authenticate early so you can jump straight in when 8 PM hits.</p>
+              </div>
+              <div className="flex gap-3">
+                {!isAuthenticated && (
+                  <button onClick={goLogin} className="rounded-full bg-gradient-to-r from-pink-500 via-rose-500 to-fuchsia-500 px-6 py-3 text-sm font-medium text-neutral-50 hover:from-pink-500 hover:to-rose-500 transition-colors">Sign in</button>
+                )}
+                <button onClick={goHome} className="rounded-full border border-neutral-700/70 px-6 py-3 text-sm font-medium text-neutral-300 hover:text-neutral-100 hover:border-neutral-500 transition-colors">Home</button>
+              </div>
+            </div>
+          </div>
+          <aside className="space-y-6">
+            <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-6 space-y-4">
+              <h3 className="font-medium tracking-tight text-neutral-100 flex items-center gap-2">Window Status {isOpen && <span className="w-2 h-2 rounded-full bg-pink-400 animate-pulse" />}</h3>
+              {isOpen ? (
+                <p className="text-sm text-neutral-400">Live right now. You can join and start pairing instantly.</p>
+              ) : (
+                <p className="text-sm text-neutral-400">Closed. Opens tonight at <span className="text-neutral-200 font-medium">8 PM</span> local time.</p>
+              )}
+              {!isOpen && (
+                <div className="text-xs font-mono text-neutral-300 bg-neutral-800/60 border border-neutral-700/60 rounded-full px-4 py-2 inline-block">Next: <span className="text-pink-300">{countdown}</span></div>
               )}
             </div>
-          )}
-        </nav>
-
-        {/* Hero Section - Full Height */}
-        <main className='flex-1 flex items-center px-4 sm:px-6 lg:px-8 py-8'>
-          <div className='max-w-7xl mx-auto w-full'>
-            <div className='grid lg:grid-cols-12 gap-8 lg:gap-12 items-center min-h-[calc(100vh-120px)]'>
-              
-              {/* Left Content */}
-              <div className='lg:col-span-7 space-y-8'>
-                {/* Badge */}
-                <div className='inline-flex items-center bg-gradient-to-r from-pink-100 to-rose-100 text-pink-700 px-4 py-2 rounded-full text-sm font-semibold border border-pink-200'>
-                  <span className='mr-2'>🎓</span>
-                  Built exclusively for college students
-                </div>
-
-                {/* Main Heading */}
-                <div className='space-y-6'>
-                  <h1 className='text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold text-gray-900 leading-[1.1]'>
-                    Your campus,
-                    <br />
-                    <span className='bg-gradient-to-r from-pink-500 via-rose-500 to-pink-600 bg-clip-text text-transparent'>
-                      anonymously
-                    </span>
-                    <br />
-                    connected
-                  </h1>
-
-                  {/* Rotating Messages */}
-                  <div className='h-16 flex items-center'>
-                    <p className='text-lg sm:text-xl lg:text-2xl text-gray-600 leading-relaxed transition-all duration-500'>
-                      {messages[currentMessageIndex]}
-                    </p>
-                  </div>
-                </div>
-
-                {/* CTA Buttons */}
-                <div className='flex flex-col sm:flex-row gap-4'>
-                  <a
-                    href='/login'
-                    className='group relative px-8 py-4 bg-gradient-to-r from-pink-500 to-rose-600 text-white font-semibold rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 text-center overflow-hidden'
-                    onMouseEnter={() => setIsHovered(true)}
-                    onMouseLeave={() => setIsHovered(false)}>
-                    <span className='relative z-10 flex items-center justify-center text-lg'>
-                      Start Connecting
-                      <svg
-                        className={`ml-2 w-5 h-5 transition-transform duration-300 ${isHovered ? 'translate-x-1' : ''}`}
-                        fill='none'
-                        stroke='currentColor'
-                        viewBox='0 0 24 24'>
-                        <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M17 8l4 4m0 0l-4 4m4-4H3' />
-                      </svg>
-                    </span>
-                    <div className='absolute inset-0 bg-gradient-to-r from-pink-600 to-rose-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300'></div>
-                  </a>
-
-                  <button className='px-8 py-4 bg-white border-2 border-gray-200 text-gray-700 font-semibold rounded-2xl hover:border-pink-300 hover:text-pink-600 hover:bg-pink-50 transition-all duration-300 text-lg backdrop-blur-sm'>
-                    Learn More
-                  </button>
-                </div>
-
-                {/* Stats */}
-                <div className='grid grid-cols-3 gap-6 pt-8 border-t border-gray-100'>
-                  <div className='text-center lg:text-left'>
-                    <div className='text-2xl lg:text-3xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent'>25K+</div>
-                    <div className='text-sm text-gray-600 font-medium'>Active Students</div>
-                  </div>
-                  <div className='text-center lg:text-left'>
-                    <div className='text-2xl lg:text-3xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent'>500+</div>
-                    <div className='text-sm text-gray-600 font-medium'>College Campuses</div>
-                  </div>
-                  <div className='text-center lg:text-left'>
-                    <div className='text-2xl lg:text-3xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent'>99.9%</div>
-                    <div className='text-sm text-gray-600 font-medium'>Privacy Rate</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Content - Phone Mockup */}
-              <div className='lg:col-span-5 flex justify-center lg:justify-end'>
-                <div className='relative'>
-                  {/* Floating Elements */}
-                  <div className='absolute -top-8 -left-8 w-16 h-16 bg-gradient-to-br from-yellow-300 to-pink-300 rounded-2xl rotate-12 opacity-80 animate-float'></div>
-                  <div className='absolute -bottom-6 -right-6 w-12 h-12 bg-gradient-to-br from-purple-300 to-pink-300 rounded-full opacity-70 animate-float animation-delay-2000'></div>
-                  <div className='absolute top-1/3 -left-12 w-8 h-8 bg-gradient-to-br from-blue-300 to-pink-300 rounded-lg rotate-45 opacity-60 animate-float animation-delay-4000'></div>
-
-                  {/* Phone Mockup */}
-                  <div className='relative z-10 bg-gray-900 rounded-[2.5rem] p-2 w-80 h-[700px] shadow-2xl'>
-                    <div className='bg-white rounded-[2rem] h-full overflow-hidden relative'>
-                      {/* Phone Header */}
-                      <div className='bg-gradient-to-r from-pink-500 to-rose-600 p-4 relative'>
-                        <div className='flex items-center justify-between'>
-                          <div className='flex items-center space-x-3'>
-                            <div className='w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm'>
-                              <img src='/beanhead.svg' alt='Avatar' className='w-6 h-6' />
-                            </div>
-                            <div>
-                              <div className='font-semibold text-white'>Anonymous Buddy</div>
-                              <div className='text-xs text-pink-100 flex items-center'>
-                                <div className='w-2 h-2 bg-green-400 rounded-full mr-1'></div>
-                                online now
-                              </div>
-                            </div>
-                          </div>
-                          <button className='w-8 h-8 rounded-full bg-white/20 flex items-center justify-center'>
-                            <span className='text-white text-lg'>⋮</span>
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Chat Messages */}
-                      <div className='p-4 space-y-4 h-[calc(100%-80px)] bg-gradient-to-b from-gray-50 to-white overflow-hidden'>
-                        {/* Incoming Message */}
-                        <div className='flex justify-start'>
-                          <div className='bg-white p-4 rounded-2xl rounded-tl-lg shadow-sm max-w-[240px] border border-gray-100'>
-                            <p className='text-sm text-gray-800'>
-                              Hey! I'm in the same major as you. Want to study together for the midterm? 📚
-                            </p>
-                            <p className='text-xs text-gray-500 mt-2'>StudyBuddy • 5m ago</p>
-                          </div>
-                        </div>
-
-                        {/* Outgoing Message */}
-                        <div className='flex justify-end'>
-                          <div className='bg-gradient-to-r from-pink-500 to-rose-600 p-4 rounded-2xl rounded-tr-lg shadow-sm max-w-[240px]'>
-                            <p className='text-sm text-white'>
-                              Absolutely! This anonymous feature makes it so much easier to reach out. Library at 3pm? ✨
-                            </p>
-                            <p className='text-xs text-pink-100 mt-2'>You • 2m ago</p>
-                          </div>
-                        </div>
-
-                        {/* Incoming Message */}
-                        <div className='flex justify-start'>
-                          <div className='bg-white p-4 rounded-2xl rounded-tl-lg shadow-sm max-w-[240px] border border-gray-100'>
-                            <p className='text-sm text-gray-800'>
-                              Perfect! I love how safe this app feels for making new connections 🛡️
-                            </p>
-                            <p className='text-xs text-gray-500 mt-2'>StudyBuddy • just now</p>
-                          </div>
-                        </div>
-
-                        {/* Typing Indicator */}
-                        <div className='flex justify-start'>
-                          <div className='bg-gray-100 p-3 rounded-2xl rounded-tl-lg'>
-                            <div className='flex space-x-1'>
-                              <div className='w-2 h-2 bg-gray-400 rounded-full animate-bounce'></div>
-                              <div className='w-2 h-2 bg-gray-400 rounded-full animate-bounce animation-delay-150'></div>
-                              <div className='w-2 h-2 bg-gray-400 rounded-full animate-bounce animation-delay-300'></div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-6 space-y-3">
+              <h3 className="font-medium tracking-tight text-neutral-100">Why one hour?</h3>
+              <p className="text-sm text-neutral-400 leading-relaxed">Scarcity combats burnout and doom-scrolling. It nudges presence, not passive consumption. You show up because others chose to show up too.</p>
             </div>
-          </div>
-        </main>
-      </div>
+          </aside>
+        </div>
+      </section>
+
+      <footer className="relative z-10 px-6 pb-12 max-w-6xl mx-auto text-[11px] text-neutral-600 flex flex-col sm:flex-row gap-2 sm:items-center justify-between">
+        <p>&copy; {new Date().getFullYear()} CloakTalk. Students first.</p>
+        <p className="text-neutral-600">Built for mindful, anonymous connection.</p>
+      </footer>
     </div>
   );
 }
-
-export default page
