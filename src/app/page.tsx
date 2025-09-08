@@ -108,9 +108,9 @@ export default function Home() {
         <div className="max-w-3xl mx-auto space-y-10">
           <div className="space-y-6">
             <h1 className="text-5xl sm:text-6xl font-semibold tracking-tight leading-[1.05] bg-gradient-to-br from-neutral-50 via-neutral-200 to-neutral-400 bg-clip-text text-transparent">
-              Speak freely.
+              <span className="block sm:inline">Speak freely.</span>
               <br className="hidden sm:block" />
-              <span className="bg-gradient-to-r from-pink-400 via-fuchsia-400 to-rose-400 bg-clip-text text-transparent">Stay invisible.</span>
+              <span className="block sm:inline bg-gradient-to-r from-pink-400 via-fuchsia-400 to-rose-400 bg-clip-text text-transparent">Stay invisible.</span>
             </h1>
             <p className="text-base sm:text-lg text-neutral-400 leading-relaxed max-w-2xl mx-auto">
               One focused hour each night to connect with real students from your campus—no names, no judgment, just honest conversation.

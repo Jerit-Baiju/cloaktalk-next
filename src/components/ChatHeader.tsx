@@ -35,9 +35,6 @@ const ChatHeader: React.FC = () => {
             ) : (
               <span className='text-pink-200 font-semibold text-sm'>{currentChat.name.charAt(0)}</span>
             )}
-            {currentChat.isOnline && (
-              <span className='absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 ring-2 ring-neutral-950'></span>
-            )}
           </div>
           <div className='flex flex-col min-w-0'>
             <h2 className='text-sm font-medium tracking-tight text-neutral-100 truncate'>{currentChat.name}</h2>
