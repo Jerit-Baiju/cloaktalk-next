@@ -81,9 +81,29 @@ body {
   animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-/* New modern animations */
+/* New modern animations - Safari compatible */
 .animate-blob {
   animation: blob 7s infinite;
+  will-change: transform;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  /* Force GPU acceleration to prevent rendering issues */
+  transform: translateZ(0);
+}
+
+/* Safari-specific fixes for blob animation */
+@supports (-webkit-appearance: none) {
+  .animate-blob {
+    /* Use transform instead of mix-blend-mode for Safari */
+    mix-blend-mode: normal;
+    opacity: 0.4;
+  }
+}
+
+/* Cross-browser blob styling */
+.bg-blob {
+  background: radial-gradient(circle, currentColor 0%, transparent 70%);
+  border-radius: 50%;
 }
 
 .animation-delay-2000 {
