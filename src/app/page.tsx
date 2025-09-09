@@ -1,16 +1,14 @@
 'use client';
 
+import { useAccessControl } from '@/contexts/AccessControlContext';
 import { useAuth } from '@/contexts/AuthContext';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-// Availability window (local browser time). Assumes 20:00:00 <= time < 21:00:00
-const OPEN_HOUR_START = 22; // 8 PM
-const OPEN_HOUR_END = 23;   // 9 PM (exclusive)
-
 export default function Home() {
   const { isAuthenticated, loading } = useAuth();
+  const { canAccess, accessData, loading: accessLoading } = useAccessControl();
   const router = useRouter();
 
   const [now, setNow] = useState<Date>(() => new Date());
@@ -22,25 +20,57 @@ export default function Home() {
     return () => clearInterval(id);
   }, []);
 
+  // Calculate if we should show as "open" based on access control
   const isOpen = useMemo(() => {
-    const h = now.getHours();
-    return h >= OPEN_HOUR_START && h < OPEN_HOUR_END; // simple hour gate
-  }, [now]);
+    return isAuthenticated && canAccess;
+  }, [isAuthenticated, canAccess]);
 
-  const msUntilNextOpen = useMemo(() => {
-    if (isOpen) return 0;
+  // Calculate countdown based on access data or fallback to local time
+  const countdown = useMemo(() => {
+    if (isOpen) return 'Starting now';
+
+    // If we have window timing from backend, use it
+    if (accessData?.window_start && accessData?.window_end) {
+      const [startHour, startMin] = accessData.window_start.split(':').map(Number);
+      const [endHour, endMin] = accessData.window_end.split(':').map(Number);
+      
+      const nextStart = new Date(now);
+      if (now.getHours() > endHour || (now.getHours() === endHour && now.getMinutes() >= endMin)) {
+        // Tomorrow's window
+        nextStart.setDate(nextStart.getDate() + 1);
+      }
+      nextStart.setHours(startHour, startMin, 0, 0);
+      
+      const msUntil = nextStart.getTime() - now.getTime();
+      if (msUntil <= 0) return 'Starting now';
+      
+      const totalSeconds = Math.floor(msUntil / 1000);
+      const hrs = Math.floor(totalSeconds / 3600);
+      const mins = Math.floor((totalSeconds % 3600) / 60);
+      const secs = totalSeconds % 60;
+      const parts = [] as string[];
+      if (hrs) parts.push(`${hrs}h`);
+      if (hrs || mins) parts.push(`${mins}m`);
+      parts.push(`${secs}s`);
+      
+      return parts.join(' ');
+    }
+
+    // Fallback to hardcoded times (8-9 PM)
+    const OPEN_HOUR_START = 20; // 8 PM
+    const OPEN_HOUR_END = 21;   // 9 PM (exclusive)
+    
     const next = new Date(now);
     if (now.getHours() >= OPEN_HOUR_END) {
-      // Tomorrow 20:00
+      // Tomorrow 8:00 PM
       next.setDate(next.getDate() + 1);
     }
     next.setHours(OPEN_HOUR_START, 0, 0, 0);
-    return next.getTime() - now.getTime();
-  }, [now, isOpen]);
-
-  const countdown = useMemo(() => {
-    if (msUntilNextOpen <= 0) return 'Starting now';
-    const totalSeconds = Math.floor(msUntilNextOpen / 1000);
+    const msUntil = next.getTime() - now.getTime();
+    
+    if (msUntil <= 0) return 'Starting now';
+    
+    const totalSeconds = Math.floor(msUntil / 1000);
     const hrs = Math.floor(totalSeconds / 3600);
     const mins = Math.floor((totalSeconds % 3600) / 60);
     const secs = totalSeconds % 60;
@@ -48,23 +78,29 @@ export default function Home() {
     if (hrs) parts.push(`${hrs}h`);
     if (hrs || mins) parts.push(`${mins}m`);
     parts.push(`${secs}s`);
+    
     return parts.join(' ');
-  }, [msUntilNextOpen]);
+  }, [now, isOpen, accessData]);
 
   const startChat = useCallback(() => {
     if (!isAuthenticated) {
       router.push('/login');
       return;
     }
+    
+    if (!canAccess) {
+      // Show access denied message or redirect
+      return;
+    }
+    
     // Prefer crypto for stronger randomness
     const uuid = typeof crypto !== 'undefined' && 'randomUUID' in crypto
       ? crypto.randomUUID()
       : 'anonymous-' + Math.random().toString(36).slice(2, 11);
     router.push(`/chat/${uuid}`);
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, canAccess, router]);
 
-
-  if (loading) {
+  if (loading || accessLoading) {
     return (
       <div className="h-screen flex items-center justify-center bg-neutral-950 text-neutral-200">
         <div className="flex flex-col items-center gap-4">
@@ -73,6 +109,74 @@ export default function Home() {
           </div>
           <p className="text-sm tracking-wide text-neutral-400">Preparing your cloak…</p>
         </div>
+      </div>
+    );
+  }
+
+  // Show access denied message if authenticated but cannot access
+  if (isAuthenticated && !canAccess && accessData) {
+    return (
+      <div className="h-screen relative overflow-hidden bg-neutral-950 text-neutral-100 selection:bg-pink-500/30">
+        {/* Subtle radial gradients */}
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -top-32 -left-32 w-[45rem] h-[45rem] bg-[radial-gradient(circle_at_center,rgba(236,72,153,0.18),transparent_70%)]" />
+          <div className="absolute bottom-0 right-0 w-[40rem] h-[40rem] bg-[radial-gradient(circle_at_center,rgba(217,70,239,0.15),transparent_70%)]" />
+        </div>
+
+        {/* Top bar */}
+        <header className="relative z-10 flex items-center justify-between px-5 py-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center">
+              <Image src="/logo.png" alt="CloakTalk" width={44} height={44} />
+            </div>
+            <div className="flex flex-col leading-tight">
+              <span className="font-semibold tracking-tight text-neutral-50">CloakTalk</span>
+              <span className="text-[10px] uppercase tracking-[0.18em] text-neutral-400">Anonymous Campus Chat</span>
+            </div>
+          </div>
+        </header>
+
+        {/* Main content */}
+        <main className="relative z-10 h-[calc(100vh-72px)] flex flex-col items-center justify-center px-6 text-center">
+          <div className="max-w-3xl mx-auto space-y-10">
+            <div className="space-y-6">
+              <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight leading-[1.05] bg-gradient-to-br from-neutral-50 via-neutral-200 to-neutral-400 bg-clip-text text-transparent">
+                Access Currently Restricted
+              </h1>
+              <div className="bg-neutral-900/60 border border-neutral-700/60 rounded-2xl p-8 max-w-2xl mx-auto">
+                <p className="text-lg text-neutral-300 mb-4">
+                  {accessData.message}
+                </p>
+                
+                {accessData.reason === 'college_inactive' && (
+                  <div className="text-sm text-neutral-400 space-y-2">
+                    <p>Your college: <span className="text-neutral-200">{accessData.college_name}</span></p>
+                    <p>Status: <span className="text-red-400">Currently disabled</span></p>
+                    <p className="mt-4">Contact your administrator to enable access for your institution.</p>
+                  </div>
+                )}
+                
+                {accessData.reason === 'outside_window' && (
+                  <div className="text-sm text-neutral-400 space-y-2">
+                    <p>Your college: <span className="text-neutral-200">{accessData.college_name}</span></p>
+                    <p>Access window: <span className="text-neutral-200">
+                      {accessData.window_start?.slice(0, 5)} - {accessData.window_end?.slice(0, 5)}
+                    </span></p>
+                    <div className="text-neutral-300 font-mono text-sm bg-neutral-800/60 border border-neutral-700/60 rounded-full px-5 py-2 mt-4">
+                      Next session in: <span className="text-pink-300">{countdown}</span>
+                    </div>
+                  </div>
+                )}
+                
+                {accessData.reason === 'no_college' && (
+                  <div className="text-sm text-neutral-400">
+                    <p>Please contact support to associate your account with a college.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
     );
   }
@@ -117,7 +221,7 @@ export default function Home() {
           {isOpen ? (
             <div className="space-y-6">
               <div className="text-xs uppercase tracking-[0.25em] text-pink-300/70 flex items-center justify-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-pink-400 animate-pulse" /> Live Window 8–9 PM
+                <span className="w-2 h-2 rounded-full bg-pink-400 animate-pulse" /> Live Window
               </div>
               <div>
                 <button
@@ -149,7 +253,11 @@ export default function Home() {
                   <span className="w-2 h-2 rounded-full bg-neutral-600" /> Window Closed
                 </div>
                 <p className="text-neutral-400 text-sm max-w-sm leading-relaxed">
-                  CloakTalk opens nightly from <span className="text-neutral-200 font-medium">8 PM - 9 PM</span> local time.
+                  CloakTalk opens nightly from{' '}
+                  <span className="text-neutral-200 font-medium">
+                    {accessData?.window_start?.slice(0, 5) || '20:00'} - {accessData?.window_end?.slice(0, 5) || '21:00'}
+                  </span>{' '}
+                  local time.
                 </p>
                 <div className="text-neutral-300 font-mono text-sm bg-neutral-800/60 border border-neutral-700/60 rounded-full px-5 py-2">
                   Next session in: <span className="text-pink-300">{countdown}</span>

@@ -102,14 +102,31 @@ export const useAxios = () => {
     } catch (err: unknown) {
       let errorMessage = 'An error occurred';
       let statusCode = 500;
+      let errorData: unknown = null;
       
       if (err && typeof err === 'object' && 'response' in err) {
-        const axiosError = err as { response?: { data?: { detail?: string; error?: string }; status?: number }; message?: string };
-        errorMessage = axiosError.response?.data?.detail || 
-                      axiosError.response?.data?.error || 
-                      axiosError.message || 
-                      'An error occurred';
+        const axiosError = err as { 
+          response?: { 
+            data?: unknown; 
+            status?: number 
+          }; 
+          message?: string 
+        };
+        
         statusCode = axiosError.response?.status || 500;
+        errorData = axiosError.response?.data;
+        
+        // Try to get error message from various possible fields
+        if (errorData && typeof errorData === 'object') {
+          const responseData = errorData as Record<string, unknown>;
+          errorMessage = (responseData.detail as string) || 
+                        (responseData.message as string) || 
+                        (responseData.error as string) || 
+                        axiosError.message || 
+                        'An error occurred';
+        } else {
+          errorMessage = axiosError.message || 'An error occurred';
+        }
       }
       
       setError(errorMessage);
@@ -117,6 +134,7 @@ export const useAxios = () => {
       return {
         error: errorMessage,
         status: statusCode,
+        errorData: errorData, // Include the full error response data
       };
     } finally {
       setLoading(false);
