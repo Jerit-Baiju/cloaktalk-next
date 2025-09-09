@@ -16,7 +16,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [tokenData, setTokenData] = useState<TokenData | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const { get, post } = useAxios();
+  const { post } = useAxios();
 
   // Initialize auth state from localStorage and validate tokens
   useEffect(() => {
@@ -49,7 +49,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
 
     initializeAuth();
-  }, []);
+  });
 
   // Function to validate token and fetch user data
   const validateAndFetchUser = async (tokens: TokenData): Promise<boolean> => {
@@ -142,7 +142,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const interval = setInterval(validateTokenPeriodically, 5 * 60 * 1000); // 5 minutes
 
     return () => clearInterval(interval);
-  }, [tokenData]);
+  });
 
   // Login with Google authorization code
   const login = async (code: string): Promise<void> => {
