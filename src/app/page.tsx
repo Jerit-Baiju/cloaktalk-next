@@ -29,57 +29,70 @@ export default function Home() {
   const countdown = useMemo(() => {
     if (isOpen) return 'Starting now';
 
+    const fmt = (msUntil: number) => {
+      const totalSeconds = Math.max(0, Math.floor(msUntil / 1000));
+      const hrs = Math.floor(totalSeconds / 3600);
+      const mins = Math.floor((totalSeconds % 3600) / 60);
+      const secs = totalSeconds % 60;
+      const parts: string[] = [];
+      if (hrs) parts.push(`${hrs}h`);
+      if (hrs || mins) parts.push(`${mins}m`);
+      parts.push(`${secs}s`);
+      return parts.join(' ');
+    };
+
+    // Helper for next window start with potential cross-midnight
+    const nextStartFrom = (n: Date, sh: number, sm: number, eh: number, em: number) => {
+      const start = new Date(n);
+      const end = new Date(n);
+      start.setHours(sh, sm, 0, 0);
+      end.setHours(eh, em, 0, 0);
+
+      const crossesMidnight = end.getTime() <= start.getTime();
+      const afterEnd = n.getTime() > end.getTime();
+      const beforeStart = n.getTime() < start.getTime();
+
+      if (crossesMidnight) {
+        // Window like 21:00 – 01:00
+        // If we're before start but it's same calendar day, next start is today at start
+        // If we're after end (daytime), next start is today at start
+        // If we're between start and end (spanning midnight), we'd be open and returned earlier
+        if (beforeStart || afterEnd) {
+          return start;
+        }
+      } else {
+        // Regular same-day window
+        if (beforeStart) return start;
+        if (afterEnd) {
+          const tomorrow = new Date(n);
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          tomorrow.setHours(sh, sm, 0, 0);
+          return tomorrow;
+        }
+      }
+
+      // Default: if ambiguous, schedule for next day start
+      const tomorrow = new Date(n);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(sh, sm, 0, 0);
+      return tomorrow;
+    };
+
     // If we have window timing from backend, use it
     if (accessData?.window_start && accessData?.window_end) {
       const [startHour, startMin] = accessData.window_start.split(':').map(Number);
       const [endHour, endMin] = accessData.window_end.split(':').map(Number);
-      
-      const nextStart = new Date(now);
-      if (now.getHours() > endHour || (now.getHours() === endHour && now.getMinutes() >= endMin)) {
-        // Tomorrow's window
-        nextStart.setDate(nextStart.getDate() + 1);
-      }
-      nextStart.setHours(startHour, startMin, 0, 0);
-      
-      const msUntil = nextStart.getTime() - now.getTime();
-      if (msUntil <= 0) return 'Starting now';
-      
-      const totalSeconds = Math.floor(msUntil / 1000);
-      const hrs = Math.floor(totalSeconds / 3600);
-      const mins = Math.floor((totalSeconds % 3600) / 60);
-      const secs = totalSeconds % 60;
-      const parts = [] as string[];
-      if (hrs) parts.push(`${hrs}h`);
-      if (hrs || mins) parts.push(`${mins}m`);
-      parts.push(`${secs}s`);
-      
-      return parts.join(' ');
+      const startDate = nextStartFrom(now, startHour, startMin, endHour, endMin);
+      const msUntil = startDate.getTime() - now.getTime();
+      return fmt(msUntil);
     }
 
     // Fallback to hardcoded times (8-9 PM)
     const OPEN_HOUR_START = 20; // 8 PM
     const OPEN_HOUR_END = 21;   // 9 PM (exclusive)
-    
-    const next = new Date(now);
-    if (now.getHours() >= OPEN_HOUR_END) {
-      // Tomorrow 8:00 PM
-      next.setDate(next.getDate() + 1);
-    }
-    next.setHours(OPEN_HOUR_START, 0, 0, 0);
-    const msUntil = next.getTime() - now.getTime();
-    
-    if (msUntil <= 0) return 'Starting now';
-    
-    const totalSeconds = Math.floor(msUntil / 1000);
-    const hrs = Math.floor(totalSeconds / 3600);
-    const mins = Math.floor((totalSeconds % 3600) / 60);
-    const secs = totalSeconds % 60;
-    const parts = [] as string[];
-    if (hrs) parts.push(`${hrs}h`);
-    if (hrs || mins) parts.push(`${mins}m`);
-    parts.push(`${secs}s`);
-    
-    return parts.join(' ');
+    const startDate = nextStartFrom(now, OPEN_HOUR_START, 0, OPEN_HOUR_END, 0);
+    const msUntil = startDate.getTime() - now.getTime();
+    return fmt(msUntil);
   }, [now, isOpen, accessData]);
 
   const startChat = useCallback(() => {
@@ -113,73 +126,8 @@ export default function Home() {
     );
   }
 
-  // Show access denied message if authenticated but cannot access
-  if (isAuthenticated && !canAccess && accessData) {
-    return (
-      <div className="h-screen relative overflow-hidden bg-neutral-950 text-neutral-100 selection:bg-pink-500/30">
-        {/* Subtle radial gradients */}
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-32 -left-32 w-[45rem] h-[45rem] bg-[radial-gradient(circle_at_center,rgba(236,72,153,0.18),transparent_70%)]" />
-          <div className="absolute bottom-0 right-0 w-[40rem] h-[40rem] bg-[radial-gradient(circle_at_center,rgba(217,70,239,0.15),transparent_70%)]" />
-        </div>
-
-        {/* Top bar */}
-        <header className="relative z-10 flex items-center justify-between px-5 py-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center">
-              <Image src="/logo.png" alt="CloakTalk" width={44} height={44} />
-            </div>
-            <div className="flex flex-col leading-tight">
-              <span className="font-semibold tracking-tight text-neutral-50">CloakTalk</span>
-              <span className="text-[10px] uppercase tracking-[0.18em] text-neutral-400">Anonymous Campus Chat</span>
-            </div>
-          </div>
-        </header>
-
-        {/* Main content */}
-        <main className="relative z-10 h-[calc(100vh-72px)] flex flex-col items-center justify-center px-6 text-center">
-          <div className="max-w-3xl mx-auto space-y-10">
-            <div className="space-y-6">
-              <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight leading-[1.05] bg-gradient-to-br from-neutral-50 via-neutral-200 to-neutral-400 bg-clip-text text-transparent">
-                Access Currently Restricted
-              </h1>
-              <div className="bg-neutral-900/60 border border-neutral-700/60 rounded-2xl p-8 max-w-2xl mx-auto">
-                <p className="text-lg text-neutral-300 mb-4">
-                  {accessData.message}
-                </p>
-                
-                {accessData.reason === 'college_inactive' && (
-                  <div className="text-sm text-neutral-400 space-y-2">
-                    <p>Your college: <span className="text-neutral-200">{accessData.college_name}</span></p>
-                    <p>Status: <span className="text-red-400">Currently disabled</span></p>
-                    <p className="mt-4">Contact your administrator to enable access for your institution.</p>
-                  </div>
-                )}
-                
-                {accessData.reason === 'outside_window' && (
-                  <div className="text-sm text-neutral-400 space-y-2">
-                    <p>Your college: <span className="text-neutral-200">{accessData.college_name}</span></p>
-                    <p>Access window: <span className="text-neutral-200">
-                      {accessData.window_start?.slice(0, 5)} - {accessData.window_end?.slice(0, 5)}
-                    </span></p>
-                    <div className="text-neutral-300 font-mono text-sm bg-neutral-800/60 border border-neutral-700/60 rounded-full px-5 py-2 mt-4">
-                      Next session in: <span className="text-pink-300">{countdown}</span>
-                    </div>
-                  </div>
-                )}
-                
-                {accessData.reason === 'no_college' && (
-                  <div className="text-sm text-neutral-400">
-                    <p>Please contact support to associate your account with a college.</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </main>
-      </div>
-    );
-  }
+  // Previously this returned early with a full-screen "Window closed" page, which hid the hero.
+  // Keep rendering the main page and show a compact banner instead when access is denied.
 
   return (
     <div className="h-screen relative overflow-hidden bg-neutral-950 text-neutral-100 selection:bg-pink-500/30">
@@ -205,6 +153,34 @@ export default function Home() {
 
       {/* Main hero */}
       <main className="relative z-10 h-[calc(100vh-72px)] flex flex-col items-center justify-center px-6 text-center">
+        {isAuthenticated && !canAccess && accessData && (
+          <div className="absolute top-6 left-1/2 -translate-x-1/2 w-[min(92vw,680px)] bg-neutral-900/80 border border-neutral-700/60 rounded-xl p-4 text-sm text-neutral-300 backdrop-blur">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="text-left">
+                {accessData.reason === 'outside_window' && (
+                  <>
+                    You’re early — opens{' '}
+                    <span className="text-neutral-100 font-medium">
+                      {accessData.window_start?.slice(0, 5)} – {accessData.window_end?.slice(0, 5)}
+                    </span>
+                    . Next window in <span className="text-pink-300 font-mono">{countdown}</span>.
+                  </>
+                )}
+                {accessData.reason === 'college_inactive' && (
+                  <>
+                    {accessData.college_name}: <span className="text-red-400">Not live yet</span>
+                  </>
+                )}
+                {accessData.reason === 'no_college' && (
+                  <>We couldn’t confirm your campus for this account.</>
+                )}
+                {!['outside_window','college_inactive','no_college'].includes(accessData.reason as string) && (
+                  <>{accessData.message}</>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
         <div className="max-w-3xl mx-auto space-y-10">
           <div className="space-y-6">
             <h1 className="text-5xl sm:text-6xl font-semibold tracking-tight leading-[1.05] bg-gradient-to-br from-neutral-50 via-neutral-200 to-neutral-400 bg-clip-text text-transparent">

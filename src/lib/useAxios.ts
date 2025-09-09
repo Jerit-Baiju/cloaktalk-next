@@ -46,7 +46,7 @@ const createAxiosInstance = (): AxiosInstance => {
             try {
               // Try to refresh token
               const refreshResponse = await axios.post(
-                `${process.env.NEXT_PUBLIC_API_BASE_URL}/accounts/token/refresh/`,
+                `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/token/refresh/`,
                 { refresh: parsed.refresh }
               );
 
