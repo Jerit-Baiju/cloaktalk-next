@@ -6,11 +6,11 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 // Availability window (local browser time). Assumes 20:00:00 <= time < 21:00:00
-const OPEN_HOUR_START = 20; // 8 PM
-const OPEN_HOUR_END = 21;   // 9 PM (exclusive)
+const OPEN_HOUR_START = 22; // 8 PM
+const OPEN_HOUR_END = 23;   // 9 PM (exclusive)
 
 export default function Home() {
-  const { user, isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
   const router = useRouter();
 
   const [now, setNow] = useState<Date>(() => new Date());
@@ -63,14 +63,13 @@ export default function Home() {
     router.push(`/chat/${uuid}`);
   }, [isAuthenticated, router]);
 
-  const goLearn = useCallback(() => router.push('/welcome'), [router]);
 
   if (loading) {
     return (
       <div className="h-screen flex items-center justify-center bg-neutral-950 text-neutral-200">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-pink-500 to-fuchsia-600 flex items-center justify-center animate-pulse">
-            <Image src="/logo.png" alt="Logo" width={28} height={28} />
+          <div className="w-42 h-22 rounded-xl flex items-center justify-center animate-pulse">
+            <Image src="/logo.png" alt="Logo" width={100} height={100} />
           </div>
           <p className="text-sm tracking-wide text-neutral-400">Preparing your cloak…</p>
         </div>
@@ -97,9 +96,6 @@ export default function Home() {
             <span className="font-semibold tracking-tight text-neutral-50">CloakTalk</span>
             <span className="text-[10px] uppercase tracking-[0.18em] text-neutral-400">Anonymous Campus Chat</span>
           </div>
-        </div>
-        <div className="flex items-center gap-4">
-          <button onClick={goLearn} className="text-sm text-neutral-400 hover:text-neutral-200 transition-colors">About</button>
         </div>
       </header>
 
@@ -145,9 +141,6 @@ export default function Home() {
                   </span>
                 </button>
               </div>
-              {!isAuthenticated && (
-                <p className="text-[13px] text-neutral-500">You will authenticate with your campus email before entering.</p>
-              )}
             </div>
           ) : (
             <div className="space-y-8">
@@ -156,24 +149,11 @@ export default function Home() {
                   <span className="w-2 h-2 rounded-full bg-neutral-600" /> Window Closed
                 </div>
                 <p className="text-neutral-400 text-sm max-w-sm leading-relaxed">
-                  CloakTalk opens nightly from <span className="text-neutral-200 font-medium">8 PM – 9 PM</span> local time.
-                  Come back then to drop in, listen, vent, or find a study partner.
+                  CloakTalk opens nightly from <span className="text-neutral-200 font-medium">8 PM - 9 PM</span> local time.
                 </p>
                 <div className="text-neutral-300 font-mono text-sm bg-neutral-800/60 border border-neutral-700/60 rounded-full px-5 py-2">
                   Next session in: <span className="text-pink-300">{countdown}</span>
                 </div>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <button
-                  onClick={goLearn}
-                  className="rounded-full border border-neutral-700/70 bg-neutral-800/50 px-8 py-3 text-sm font-medium text-neutral-300 hover:text-neutral-100 hover:border-neutral-600 transition-colors"
-                >What & Why</button>
-                {!isAuthenticated && (
-                  <button
-                    onClick={() => router.push('/login')}
-                    className="rounded-full px-8 py-3 text-sm font-medium bg-gradient-to-r from-pink-600 to-rose-600 text-neutral-50 hover:from-pink-500 hover:to-rose-500 transition-colors"
-                  >Pre‑Authenticate</button>
-                )}
               </div>
             </div>
           )}
