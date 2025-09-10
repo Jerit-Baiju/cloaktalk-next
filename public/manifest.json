@@ -1,0 +1,25 @@
+{
+  "name": "CloakTalk - Secure Student Communication",
+  "short_name": "CloakTalk",
+  "description": "Connect securely with your peers and classmates within your organization. CloakTalk provides safe, private messaging for students.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "categories": [
+    "education",
+    "social",
+    "communication"
+  ],
+  "lang": "en",
+  "scope": "/"
+}
