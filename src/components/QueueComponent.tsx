@@ -105,9 +105,12 @@ export default function QueueComponent() {
 
   if (!user) {
     return (
-      <div className="h-screen flex items-center justify-center bg-neutral-950 text-neutral-300">
-        <div className="text-center">
-          <p className="text-neutral-400">Please log in to access the queue.</p>
+      <div className="h-screen flex items-center justify-center bg-neutral-950 text-neutral-200">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-42 h-22 rounded-xl flex items-center justify-center animate-pulse">
+            <Image src="/logo.png" alt="Logo" width={100} height={100} />
+          </div>
+          <p className="text-sm tracking-wide text-neutral-400">Preparing your cloak…</p>
         </div>
       </div>
     );
