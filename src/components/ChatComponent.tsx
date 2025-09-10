@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuth } from '@/contexts/AuthContext';
-import { ChatMessage, useWebSocket } from '@/contexts/WebSocketContext';
+import { ChatMessage, useChatWebSocket } from '@/contexts/ChatWebSocketContext';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -25,9 +25,13 @@ export default function ChatComponent() {
     currentChat, 
     sendMessage, 
     endChat, 
-    isChatConnected,
-    connectToChatById
-  } = useWebSocket();
+    isConnected: isChatConnected,
+    connectToChat,
+    otherUserTyping,
+    startTyping,
+    stopTyping,
+    participantStatuses
+  } = useChatWebSocket();
   const params = useParams();
   const chatId = useMemo(() => (params?.uuid as string) || '', [params]);
   const router = useRouter();
@@ -37,6 +41,12 @@ export default function ChatComponent() {
   const [redirectSeconds, setRedirectSeconds] = useState(3);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const connectToChatRef = useRef<typeof connectToChat | null>(null);
+
+  // Keep the ref updated with the latest connectToChat function
+  useEffect(() => {
+    connectToChatRef.current = connectToChat;
+  }, [connectToChat]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -53,8 +63,8 @@ export default function ChatComponent() {
     let timer: NodeJS.Timeout | null = null;
     let countdown: NodeJS.Timeout | null = null;
     const run = async () => {
-      if (!currentChat && chatId) {
-        const result = await connectToChatById(chatId);
+      if (!currentChat && chatId && connectToChatRef.current) {
+        const result = await connectToChatRef.current(chatId);
         if (result === 'not_found' || result === 'forbidden') {
           setDeadChat(result);
         }
@@ -64,14 +74,15 @@ export default function ChatComponent() {
 
     // If dead chat detected or chat ended, schedule redirect
     if (deadChat || (!currentChat && !isChatConnected && chatId)) {
+      setRedirectSeconds(3); // Reset to 3 seconds
       timer = setTimeout(() => router.replace('/queue'), 3000);
-      countdown = setInterval(() => setRedirectSeconds((s) => (s > 1 ? s - 1 : 1)), 1000);
+      countdown = setInterval(() => setRedirectSeconds((s) => (s > 1 ? s - 1 : 0)), 1000);
     }
     return () => {
       if (timer) clearTimeout(timer);
       if (countdown) clearInterval(countdown);
     };
-  }, [chatId, currentChat, isChatConnected, connectToChatById, router, deadChat]);
+  }, [chatId, currentChat, isChatConnected, router, deadChat]); // Removed connectToChat to prevent infinite loop
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,6 +91,22 @@ export default function ChatComponent() {
       sendMessage(messageInput.trim());
       setMessageInput('');
     }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setMessageInput(e.target.value);
+    
+    // Start typing indicator when user starts typing
+    if (e.target.value.trim() && isChatConnected) {
+      startTyping();
+    } else if (!e.target.value.trim()) {
+      stopTyping();
+    }
+  };
+
+  const handleInputBlur = () => {
+    // Stop typing when input loses focus
+    stopTyping();
   };
 
   const handleEndChat = async () => {
@@ -140,10 +167,22 @@ export default function ChatComponent() {
       {/* Header */}
   <div className="bg-neutral-900/70 border-b border-neutral-800 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center">
-          <div className="w-3 h-3 rounded-full bg-green-500 mr-3"></div>
+          {/* Online status indicator */}
+          <div className={`w-3 h-3 rounded-full mr-3 ${
+            participantStatuses.some(p => p.user_id !== user?.id?.toString() && p.is_online) 
+              ? 'bg-green-500' 
+              : 'bg-neutral-500'
+          }`}></div>
           <div>
-            <h1 className="text-lg font-semibold text-gray-900">Anonymous Chat</h1>
-            <p className="text-sm text-gray-500">{currentChat.college}</p>
+            <h1 className="text-lg font-semibold text-neutral-100">Anonymous Chat</h1>
+            <p className="text-sm text-neutral-400">
+              {currentChat.college}
+              {participantStatuses.length > 0 && (
+                <span className="ml-2">
+                  • {participantStatuses.some(p => p.user_id !== user?.id?.toString() && p.is_online) ? 'Online' : 'Offline'}
+                </span>
+              )}
+            </p>
           </div>
         </div>
         
@@ -228,16 +267,25 @@ export default function ChatComponent() {
           </div>
         )}
         <form onSubmit={handleSendMessage} className="flex space-x-2">
-          <input
-            ref={inputRef}
-            type="text"
-            value={messageInput}
-            onChange={(e) => setMessageInput(e.target.value)}
-            placeholder="Type your message..."
-            disabled={!isChatConnected}
-    className="flex-1 px-4 py-2 border border-neutral-800 rounded-lg bg-neutral-950 text-neutral-100 placeholder:text-neutral-600 focus:ring-2 focus:ring-pink-500 focus:border-transparent disabled:bg-neutral-900 disabled:text-neutral-500 disabled:cursor-not-allowed"
-            maxLength={500}
-          />
+          <div className="flex-1 relative">
+            <input
+              ref={inputRef}
+              type="text"
+              value={messageInput}
+              onChange={handleInputChange}
+              onBlur={handleInputBlur}
+              placeholder="Type your message..."
+              disabled={!isChatConnected}
+      className="w-full px-4 py-2 border border-neutral-800 rounded-lg bg-neutral-950 text-neutral-100 placeholder:text-neutral-600 focus:ring-2 focus:ring-pink-500 focus:border-transparent disabled:bg-neutral-900 disabled:text-neutral-500 disabled:cursor-not-allowed"
+              maxLength={500}
+            />
+            {/* Typing indicator */}
+            {otherUserTyping && (
+              <div className="absolute -top-8 left-4 text-xs text-neutral-400 bg-neutral-900 px-2 py-1 rounded">
+                Other user is typing...
+              </div>
+            )}
+          </div>
           <button
             type="submit"
             disabled={!messageInput.trim() || !isChatConnected}

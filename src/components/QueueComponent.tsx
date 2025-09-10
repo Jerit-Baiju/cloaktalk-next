@@ -2,7 +2,8 @@
 
 import { useAccessControl } from '@/contexts/AccessControlContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { useWebSocket } from '@/contexts/WebSocketContext';
+import { useChatWebSocket } from '@/contexts/ChatWebSocketContext';
+import { useQueueWebSocket } from '@/contexts/QueueWebSocketContext';
 import { useAxios } from '@/lib/useAxios';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -17,9 +18,10 @@ export default function QueueComponent() {
     isInQueue,
     joinQueue,
     leaveQueue,
-    currentChat,
-    isQueueConnected,
-  } = useWebSocket();
+    isConnected: isQueueConnected,
+    onlineUsers,
+  } = useQueueWebSocket();
+  const { currentChat } = useChatWebSocket();
   const router = useRouter();
   const [isJoining, setIsJoining] = useState(false);
   const [activity, setActivity] = useState<{ active_chats: number; waiting_count: number; college?: string } | null>(null);
@@ -31,6 +33,20 @@ export default function QueueComponent() {
       router.push(`/chat/${currentChat.chat_id}`);
     }
   }, [currentChat, router]);
+
+  // Listen for chat matched events from queue WebSocket
+  useEffect(() => {
+    const handleChatMatched = (event: CustomEvent) => {
+      const { chatId } = event.detail;
+      if (chatId) {
+        console.log('Queue matched chat:', chatId);
+        router.push(`/chat/${chatId}`);
+      }
+    };
+
+    window.addEventListener('chatMatched', handleChatMatched as EventListener);
+    return () => window.removeEventListener('chatMatched', handleChatMatched as EventListener);
+  }, [router]);
 
   const handleJoinQueue = useCallback(async () => {
     setIsJoining(true);
