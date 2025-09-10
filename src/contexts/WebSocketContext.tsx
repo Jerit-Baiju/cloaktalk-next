@@ -66,10 +66,19 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
   const queueWsRef = useRef<WebSocket | null>(null);
   const chatWsRef = useRef<WebSocket | null>(null);
   
-  // Get WebSocket URL
+  // Get WebSocket URL with token
   const getWsUrl = (path: string) => {
     const baseWsUrl = process.env.NEXT_PUBLIC_WS_BASE_URL || 'ws://localhost:8000';
-    return `${baseWsUrl}${path}`;
+    const token = tokenData?.access;
+    const url = `${baseWsUrl}${path}`;
+    
+    // Add token as query parameter if available
+    if (token) {
+      const separator = path.includes('?') ? '&' : '?';
+      return `${url}${separator}token=${token}`;
+    }
+    
+    return url;
   };
 
   // Check for active chat

@@ -42,7 +42,14 @@ export const AccessControlProvider: React.FC<AccessControlProviderProps> = ({
 
     try {
       setLoading(true);
-      const response = await get<AccessCheckResponse>('/college/access/');
+      
+      // Explicitly pass the Authorization header to ensure it's included
+      const headers = {
+        'Authorization': `Bearer ${tokenData.access}`,
+        'Content-Type': 'application/json',
+      };
+      
+      const response = await get<AccessCheckResponse>('/college/access/', { headers });
       
       if (response.data) {
         setCanAccess(response.data.can_access);
@@ -84,7 +91,13 @@ export const AccessControlProvider: React.FC<AccessControlProviderProps> = ({
     }
 
     try {
-      const response = await get<CollegeStatusResponse>('/college/status/');
+      // Explicitly pass the Authorization header to ensure it's included
+      const headers = {
+        'Authorization': `Bearer ${tokenData.access}`,
+        'Content-Type': 'application/json',
+      };
+      
+      const response = await get<CollegeStatusResponse>('/college/status/', { headers });
       if (response.data) {
         setCollegeStatus(response.data);
       }
