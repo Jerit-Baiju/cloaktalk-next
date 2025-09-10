@@ -9,6 +9,14 @@ export interface QueueStatus {
   college: string;
   college_id: number;
   is_in_queue?: boolean;
+  queue_stats?: {
+    total_waiting: number;
+    fresh_users: number;
+    experienced_users: number;
+    ready_for_matching: boolean;
+    users_waiting_over_5_seconds: number;
+  };
+  message?: string;
 }
 
 export interface ChatMessage {
