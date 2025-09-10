@@ -49,7 +49,7 @@ export const AccessControlProvider: React.FC<AccessControlProviderProps> = ({
         'Content-Type': 'application/json',
       };
       
-      const response = await get<AccessCheckResponse>('/college/access/', { headers });
+      const response = await get<AccessCheckResponse>('/api/college/access/', { headers });
       
       if (response.data) {
         setCanAccess(response.data.can_access);

@@ -80,7 +80,7 @@ export default function QueueComponent() {
     const fetchActivity = async () => {
       try {
         const res = await get<{ college: string; college_id: number; active_chats: number; waiting_count: number }>(
-          '/college/activity/'
+          '/api/college/activity/'
         );
         if (res.data) {
           setActivity({
