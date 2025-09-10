@@ -154,15 +154,6 @@ export default function QueueComponent() {
             <span className="text-[10px] uppercase tracking-[0.18em] text-neutral-400">Anonymous Campus Chat</span>
           </div>
         </div>
-
-        <div className="flex items-center gap-2">
-          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] border ${
-            isQueueConnected ? 'border-green-600/40 text-green-300 bg-green-500/10' : 'border-red-600/40 text-red-300 bg-red-500/10'
-          }`}>
-            <span className={`w-1.5 h-1.5 rounded-full mr-2 ${isQueueConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-            {isQueueConnected ? 'Connected' : 'Disconnected'}
-          </span>
-        </div>
       </header>
 
       {/* Main */}
