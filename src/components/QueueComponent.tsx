@@ -135,7 +135,7 @@ export default function QueueComponent() {
   const windowClosed = !canAccess && accessData?.reason === 'outside_window';
 
   return (
-    <div className="h-screen relative overflow-hidden bg-neutral-950 text-neutral-100 selection:bg-pink-500/30">
+    <div className="min-h-[100dvh] relative overflow-x-hidden bg-neutral-950 text-neutral-100 selection:bg-pink-500/30">
       {/* Subtle radial gradients */}
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -top-32 -left-32 w-[45rem] h-[45rem] bg-[radial-gradient(circle_at_center,rgba(236,72,153,0.18),transparent_70%)]" />
@@ -166,7 +166,7 @@ export default function QueueComponent() {
       </header>
 
       {/* Main */}
-      <main className="relative z-10 h-[calc(100vh-72px)] flex items-center justify-center px-6">
+      <main className="relative z-10 flex items-center justify-center px-6 md:mt-12">
         <div className="w-[min(92vw,760px)] mx-auto">
           {/* Stats card */}
           <div className="bg-neutral-900/70 border border-neutral-800 rounded-2xl p-6 backdrop-blur mb-6">

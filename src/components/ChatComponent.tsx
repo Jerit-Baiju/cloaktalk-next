@@ -22,10 +22,10 @@ function AutoRedirect({ seconds, onFinish }: { seconds: number; onFinish: () => 
 
 export default function ChatComponent() {
   const { user } = useAuth();
-  const { 
-    currentChat, 
-    sendMessage, 
-    endChat, 
+  const {
+    currentChat,
+    sendMessage,
+    endChat,
     isConnected: isChatConnected,
     connectToChat,
     otherUserTyping,
@@ -87,7 +87,7 @@ export default function ChatComponent() {
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (messageInput.trim() && isChatConnected) {
       sendMessage(messageInput.trim());
       setMessageInput('');
@@ -96,7 +96,7 @@ export default function ChatComponent() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setMessageInput(e.target.value);
-    
+
     // Start typing indicator when user starts typing
     if (e.target.value.trim() && isChatConnected) {
       startTyping();
@@ -167,16 +167,12 @@ export default function ChatComponent() {
   }
 
   return (
-  <div className="flex flex-col h-screen bg-neutral-950 text-neutral-100">
+    <div className="flex flex-col h-screen bg-neutral-950 text-neutral-100">
       {/* Header */}
-  <div className="bg-neutral-900/70 border-b border-neutral-800 px-4 py-3 flex items-center justify-between">
+      <div className="bg-neutral-900/70 border-b border-neutral-800 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center">
+          <img className='h-12' src="/beanhead.svg" alt="" />
           {/* Online status indicator */}
-          <div className={`w-3 h-3 rounded-full mr-3 ${
-            participantStatuses.some(p => p.user_id !== user?.id?.toString() && p.is_online) 
-              ? 'bg-green-500' 
-              : 'bg-neutral-500'
-          }`}></div>
           <div>
             <h1 className="text-lg font-semibold text-neutral-100">Anonymous Chat</h1>
             <p className="text-sm text-neutral-400">
@@ -189,18 +185,17 @@ export default function ChatComponent() {
             </p>
           </div>
         </div>
-        
+
         <div className="flex items-center space-x-2">
           {/* Connection Status */}
-          <div className={`inline-flex items-center px-2 py-1 rounded-full text-[11px] font-medium border ${
-            isChatConnected 
-              ? 'border-green-600/40 text-green-300 bg-green-500/10' 
-              : 'border-red-600/40 text-red-300 bg-red-500/10'
-          }`}>
+          <div className={`inline-flex items-center px-2 py-1 rounded-full text-[11px] font-medium border ${isChatConnected
+            ? 'border-green-600/40 text-green-300 bg-green-500/10'
+            : 'border-red-600/40 text-red-300 bg-red-500/10'
+            }`}>
             <div className={`w-1.5 h-1.5 rounded-full mr-1 ${isChatConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
             {isChatConnected ? 'Connected' : 'Disconnected'}
           </div>
-          
+
           {/* End Chat Button */}
           {!isEnding ? (
             <button
@@ -219,7 +214,7 @@ export default function ChatComponent() {
       </div>
 
       {/* Messages */}
-  <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {currentChat.messages.length === 0 ? (
           <div className="text-center py-8">
             <div className="w-16 h-16 mx-auto bg-pink-500/10 rounded-full flex items-center justify-center mb-4">
@@ -232,13 +227,12 @@ export default function ChatComponent() {
         ) : (
           currentChat.messages.map((message: ChatMessage, index: number) => (
             <div key={message.id || index} className={`flex ${message.is_own ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                message.message_type === 'system'
-                  ? 'bg-neutral-900 border border-neutral-800 text-neutral-400 text-center text-sm mx-auto'
-                  : message.is_own
-                    ? 'bg-pink-600 text-white rounded-br-none'
-                    : 'bg-neutral-900 border border-neutral-800 text-neutral-100 rounded-bl-none'
-              }`}>
+              <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${message.message_type === 'system'
+                ? 'bg-neutral-900 border border-neutral-800 text-neutral-400 text-center text-sm mx-auto'
+                : message.is_own
+                  ? 'bg-pink-600 text-white rounded-br-none'
+                  : 'bg-neutral-900 border border-neutral-800 text-neutral-100 rounded-bl-none'
+                }`}>
                 <p className="break-words">{message.content}</p>
                 {message.message_type !== 'system' && (
                   <p className={`text-xs mt-1 ${message.is_own ? 'text-pink-100' : 'text-neutral-500'}`}>
@@ -284,7 +278,7 @@ export default function ChatComponent() {
               onBlur={handleInputBlur}
               placeholder="Type your message..."
               disabled={!isChatConnected}
-      className="w-full px-4 py-2 border border-neutral-800 rounded-lg bg-neutral-950 text-neutral-100 placeholder:text-neutral-600 focus:ring-2 focus:ring-pink-500 focus:border-transparent disabled:bg-neutral-900 disabled:text-neutral-500 disabled:cursor-not-allowed"
+              className="w-full px-4 py-2 border border-neutral-800 rounded-lg bg-neutral-950 text-neutral-100 placeholder:text-neutral-600 focus:ring-2 focus:ring-pink-500 focus:border-transparent disabled:bg-neutral-900 disabled:text-neutral-500 disabled:cursor-not-allowed"
               maxLength={500}
             />
             {/* Typing indicator */}
@@ -297,17 +291,17 @@ export default function ChatComponent() {
           <button
             type="submit"
             disabled={!messageInput.trim() || !isChatConnected}
-    className="bg-pink-600 hover:bg-pink-700 disabled:bg-neutral-800 disabled:text-neutral-500 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+            className="bg-pink-600 hover:bg-pink-700 disabled:bg-neutral-800 disabled:text-neutral-500 text-white px-6 py-2 rounded-lg font-medium transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
             </svg>
           </button>
         </form>
-        
+
         {/* Character count */}
-    <div className="flex justify-between items-center mt-2 text-xs text-neutral-500">
-      <p>Messages are anonymous and private</p>
+        <div className="flex justify-between items-center mt-2 text-xs text-neutral-500">
+          <p>Messages are anonymous and private</p>
           <p>{messageInput.length}/500</p>
         </div>
       </div>
