@@ -1,5 +1,6 @@
 import { AccessControlWrapper } from "@/components/AccessControlWrapper";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { WebSocketProvider } from "@/contexts/WebSocketContext";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -30,9 +31,11 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>
-          <AccessControlWrapper>
-            {children}
-          </AccessControlWrapper>
+          <WebSocketProvider>
+            <AccessControlWrapper>
+              {children}
+            </AccessControlWrapper>
+          </WebSocketProvider>
         </AuthProvider>
       </body>
     </html>
