@@ -1,22 +1,29 @@
 'use client';
 
+import { useAccessControl } from '@/contexts/AccessControlContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWebSocket } from '@/contexts/WebSocketContext';
+import { useAxios } from '@/lib/useAxios';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export default function QueueComponent() {
   const { user } = useAuth();
-  const { 
-    queueStatus, 
-    isInQueue, 
-    joinQueue, 
-    leaveQueue, 
-    currentChat, 
-    isQueueConnected 
+  const { canAccess, accessData } = useAccessControl();
+  const { get } = useAxios();
+  const {
+    queueStatus,
+    isInQueue,
+    joinQueue,
+    leaveQueue,
+    currentChat,
+    isQueueConnected,
   } = useWebSocket();
   const router = useRouter();
   const [isJoining, setIsJoining] = useState(false);
+  const [activity, setActivity] = useState<{ active_chats: number; waiting_count: number; college?: string } | null>(null);
+  const autoJoinAttempted = useRef(false);
 
   // Redirect to chat if user has an active chat
   useEffect(() => {
@@ -25,11 +32,11 @@ export default function QueueComponent() {
     }
   }, [currentChat, router]);
 
-  const handleJoinQueue = async () => {
+  const handleJoinQueue = useCallback(async () => {
     setIsJoining(true);
     joinQueue();
     // The isJoining state will be reset when we get the queue status update
-  };
+  }, [joinQueue]);
 
   const handleLeaveQueue = () => {
     leaveQueue();
@@ -43,11 +50,48 @@ export default function QueueComponent() {
     }
   }, [queueStatus, isJoining]);
 
+  // Auto-join queue on load when connected and within access window
+  useEffect(() => {
+    if (!autoJoinAttempted.current && isQueueConnected && canAccess && !isInQueue) {
+      autoJoinAttempted.current = true;
+      handleJoinQueue();
+    }
+  }, [isQueueConnected, canAccess, isInQueue, handleJoinQueue]);
+
+  // Fetch college activity (active chats + waiting) and refresh periodically
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    const fetchActivity = async () => {
+      try {
+        const res = await get<{ college: string; college_id: number; active_chats: number; waiting_count: number }>(
+          '/college/activity/'
+        );
+        if (res.data) {
+          setActivity({
+            active_chats: res.data.active_chats,
+            waiting_count: res.data.waiting_count,
+            college: res.data.college,
+          });
+        }
+  } catch {
+        // ignore transient errors
+      }
+    };
+
+    if (user) {
+      fetchActivity();
+      interval = setInterval(fetchActivity, 15000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [user, get]);
+
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="h-screen flex items-center justify-center bg-neutral-950 text-neutral-300">
         <div className="text-center">
-          <p className="text-gray-600">Please log in to access the queue.</p>
+          <p className="text-neutral-400">Please log in to access the queue.</p>
         </div>
       </div>
     );
@@ -55,154 +99,166 @@ export default function QueueComponent() {
 
   if (!user.college) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-6 text-center">
-          <div className="w-16 h-16 mx-auto mb-4 bg-yellow-100 rounded-full flex items-center justify-center">
-            <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="h-screen flex items-center justify-center bg-neutral-950 text-neutral-300">
+        <div className="max-w-md mx-auto bg-neutral-900 border border-neutral-800 rounded-xl p-6 text-center">
+          <div className="w-16 h-16 mx-auto mb-4 bg-yellow-500/15 rounded-full flex items-center justify-center">
+            <svg className="w-8 h-8 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 18.5c-.77.833.192 2.5 1.732 2.5z" />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No College Assigned</h3>
-          <p className="text-gray-600">You need to be assigned to a college to join the queue.</p>
+          <h3 className="text-lg font-semibold text-neutral-100 mb-2">No College Assigned</h3>
+          <p className="text-neutral-400">You need to be assigned to a college to join the queue.</p>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Anonymous Chat Queue
-            </h1>
-            <p className="text-gray-600">
-              Connect with peers from {user.college.name} anonymously
-            </p>
-          </div>
+  const windowClosed = !canAccess && accessData?.reason === 'outside_window';
 
-          {/* Connection Status */}
-          <div className="mb-6">
-            <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-              isQueueConnected 
-                ? 'bg-green-100 text-green-800' 
-                : 'bg-red-100 text-red-800'
-            }`}>
-              <div className={`w-2 h-2 rounded-full mr-2 ${
-                isQueueConnected ? 'bg-green-500' : 'bg-red-500'
-              }`}></div>
-              {isQueueConnected ? 'Connected' : 'Disconnected'}
+  return (
+    <div className="h-screen relative overflow-hidden bg-neutral-950 text-neutral-100 selection:bg-pink-500/30">
+      {/* Subtle radial gradients */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-32 -left-32 w-[45rem] h-[45rem] bg-[radial-gradient(circle_at_center,rgba(236,72,153,0.18),transparent_70%)]" />
+        <div className="absolute bottom-0 right-0 w-[40rem] h-[40rem] bg-[radial-gradient(circle_at_center,rgba(217,70,239,0.15),transparent_70%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:40px_40px] opacity-[0.07]" />
+      </div>
+
+      {/* Top bar */}
+      <header className="relative z-10 flex items-center justify-between px-5 py-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center">
+            <Image src="/logo.png" alt="CloakTalk" width={44} height={44} />
+          </div>
+          <div className="flex flex-col leading-tight">
+            <span className="font-semibold tracking-tight text-neutral-50">CloakTalk</span>
+            <span className="text-[10px] uppercase tracking-[0.18em] text-neutral-400">Anonymous Campus Chat</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] border ${
+            isQueueConnected ? 'border-green-600/40 text-green-300 bg-green-500/10' : 'border-red-600/40 text-red-300 bg-red-500/10'
+          }`}>
+            <span className={`w-1.5 h-1.5 rounded-full mr-2 ${isQueueConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+            {isQueueConnected ? 'Connected' : 'Disconnected'}
+          </span>
+        </div>
+      </header>
+
+      {/* Main */}
+      <main className="relative z-10 h-[calc(100vh-72px)] flex items-center justify-center px-6">
+        <div className="w-[min(92vw,760px)] mx-auto">
+          {/* Stats card */}
+          <div className="bg-neutral-900/70 border border-neutral-800 rounded-2xl p-6 backdrop-blur mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-semibold tracking-tight text-neutral-50">{user.college?.name}</h2>
+                <p className="text-neutral-400 text-sm">Campus activity</p>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="rounded-xl bg-neutral-900 border border-neutral-800 px-4 py-3">
+                  <div className="text-[11px] uppercase tracking-wider text-neutral-500">Chatting now</div>
+                  <div className="mt-1 text-2xl font-semibold text-pink-300">
+                    {activity ? activity.active_chats : '—'}
+                  </div>
+                </div>
+                <div className="rounded-xl bg-neutral-900 border border-neutral-800 px-4 py-3">
+                  <div className="text-[11px] uppercase tracking-wider text-neutral-500">Waiting</div>
+                  <div className="mt-1 text-2xl font-semibold text-neutral-200">
+                    {queueStatus ? queueStatus.waiting_count : activity ? activity.waiting_count : '—'}
+                  </div>
+                </div>
+                <div className="rounded-xl bg-neutral-900 border border-neutral-800 px-4 py-3 hidden sm:block">
+                  <div className="text-[11px] uppercase tracking-wider text-neutral-500">Window</div>
+                  <div className="mt-1 text-sm font-medium text-neutral-300">
+                    {accessData?.window_start?.slice(0,5)}–{accessData?.window_end?.slice(0,5)}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Queue Status Card */}
-          <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-            <div className="text-center">
-              <div className="mb-4">
-                <div className="w-20 h-20 mx-auto bg-blue-100 rounded-full flex items-center justify-center mb-4">
-                  <svg className="w-10 h-10 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2m-2-4h4m-4 0l-3-3m3 3l-3 3M9 1H3a2 2 0 00-2 2v6a2 2 0 002 2h6m1-3H4m5 0l-3-3m3 3l-3 3" />
-                  </svg>
+          {/* Queue card */}
+          <div className="bg-neutral-900/70 border border-neutral-800 rounded-2xl p-6 backdrop-blur">
+            {windowClosed ? (
+              <div className="text-center space-y-3">
+                <div className="text-xs uppercase tracking-[0.25em] text-neutral-500 flex items-center justify-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-neutral-600" /> Window Closed
                 </div>
-                
-                {queueStatus ? (
-                  <>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                      {queueStatus.college}
-                    </h3>
-                    <p className="text-3xl font-bold text-blue-600 mb-2">
-                      {queueStatus.waiting_count}
-                    </p>
-                    <p className="text-gray-600">
-                      {queueStatus.waiting_count === 1 ? 'person' : 'people'} waiting in queue
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                      Loading queue status...
-                    </h3>
-                    <div className="animate-pulse">
-                      <div className="h-12 bg-gray-200 rounded mb-2 mx-auto w-16"></div>
-                      <div className="h-4 bg-gray-200 rounded mx-auto w-32"></div>
-                    </div>
-                  </>
-                )}
+                <p className="text-neutral-400 text-sm">
+                  Opens {accessData?.window_start?.slice(0,5)} – {accessData?.window_end?.slice(0,5)} local time.
+                </p>
               </div>
-
-              {/* Queue Actions */}
-              <div className="space-y-4">
+            ) : (
+              <div className="text-center">
                 {!isInQueue ? (
-                  <button
-                    onClick={handleJoinQueue}
-                    disabled={isJoining || !isQueueConnected}
-                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold py-3 px-6 rounded-lg transition duration-200 flex items-center justify-center"
-                  >
-                    {isJoining ? (
-                      <>
-                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Joining Queue...
-                      </>
-                    ) : (
-                      'Join Queue'
-                    )}
-                  </button>
+                  <div className="max-w-sm mx-auto">
+                    <button
+                      onClick={handleJoinQueue}
+                      disabled={isJoining || !isQueueConnected}
+                      className="group relative overflow-hidden rounded-full w-full px-8 py-3.5 text-sm font-medium tracking-wide focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950 disabled:opacity-60"
+                    >
+                      <span className="absolute inset-0 bg-gradient-to-r from-pink-500 via-rose-500 to-fuchsia-500 opacity-90 group-hover:opacity-100 transition-opacity" />
+                      <span className="absolute inset-0 blur-xl bg-pink-500/40 group-hover:bg-pink-500/50 transition-colors" />
+                      <span className="relative flex items-center justify-center gap-2 text-neutral-50">
+                        {isJoining ? (
+                          <>
+                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Joining…
+                          </>
+                        ) : (
+                          <>Join Queue</>
+                        )}
+                      </span>
+                    </button>
+                    <p className="mt-3 text-xs text-neutral-500">You’ll be redirected to chat automatically once matched.</p>
+                  </div>
                 ) : (
-                  <div className="space-y-4">
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                      <div className="flex items-center">
-                        <svg className="w-5 h-5 text-yellow-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                        </svg>
-                        <p className="text-yellow-800 font-medium">
-                          You&apos;re in the queue! Waiting for a match...
-                        </p>
+                  <div className="space-y-5 max-w-md mx-auto">
+                    <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 text-left">
+                      <div className="flex items-center gap-2 text-neutral-300">
+                        <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse" />
+                        <span className="text-sm font-medium">You’re in the queue</span>
                       </div>
+                      <p className="mt-1 text-neutral-500 text-sm">Waiting for a match from {user.college?.name}…</p>
                     </div>
-                    
+
                     <button
                       onClick={handleLeaveQueue}
-                      className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200"
+                      className="w-full rounded-full border border-red-500/40 bg-red-500/10 hover:bg-red-500/15 text-red-200 text-sm font-medium py-3 transition-colors"
                     >
                       Leave Queue
                     </button>
                   </div>
                 )}
               </div>
-            </div>
+            )}
           </div>
 
-          {/* Information Card */}
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <h4 className="text-lg font-semibold text-gray-900 mb-4">How it works</h4>
-            <div className="space-y-3 text-gray-600">
-              <div className="flex items-start">
-                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-3 mt-0.5">
-                  <span className="text-blue-600 text-sm font-bold">1</span>
-                </div>
-                <p>Join the queue and wait to be matched with another student from your college</p>
+          {/* How it works */}
+          <div className="mt-6 bg-neutral-900/60 border border-neutral-800 rounded-2xl p-6">
+            <h4 className="text-sm font-semibold text-neutral-200 mb-4">How it works</h4>
+            <div className="grid sm:grid-cols-3 gap-4 text-sm">
+              <div className="rounded-xl bg-neutral-900 border border-neutral-800 p-4">
+                <div className="text-[11px] uppercase tracking-wider text-neutral-500">Step 1</div>
+                <p className="mt-1 text-neutral-300">Join the queue for your campus</p>
               </div>
-              <div className="flex items-start">
-                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-3 mt-0.5">
-                  <span className="text-blue-600 text-sm font-bold">2</span>
-                </div>
-                <p>Once matched, you&apos;ll be redirected to a private anonymous chat</p>
+              <div className="rounded-xl bg-neutral-900 border border-neutral-800 p-4">
+                <div className="text-[11px] uppercase tracking-wider text-neutral-500">Step 2</div>
+                <p className="mt-1 text-neutral-300">Get paired with another student</p>
               </div>
-              <div className="flex items-start">
-                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-3 mt-0.5">
-                  <span className="text-blue-600 text-sm font-bold">3</span>
-                </div>
-                <p>Chat safely and anonymously with your peer. End the chat anytime</p>
+              <div className="rounded-xl bg-neutral-900 border border-neutral-800 p-4">
+                <div className="text-[11px] uppercase tracking-wider text-neutral-500">Step 3</div>
+                <p className="mt-1 text-neutral-300">Chat anonymously and safely</p>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

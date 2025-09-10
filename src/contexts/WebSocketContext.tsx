@@ -8,6 +8,7 @@ export interface QueueStatus {
   waiting_count: number;
   college: string;
   college_id: number;
+  is_in_queue?: boolean;
 }
 
 export interface ChatMessage {
@@ -39,6 +40,7 @@ export interface WebSocketContextType {
   isConnectedToChat: boolean;
   sendMessage: (content: string) => void;
   endChat: () => void;
+  connectToChatById: (chatId: string) => Promise<'connected' | 'not_found' | 'forbidden' | 'error'>;
   
   // Connection status
   isQueueConnected: boolean;
@@ -67,7 +69,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
   const chatWsRef = useRef<WebSocket | null>(null);
   
   // Get WebSocket URL with token
-  const getWsUrl = (path: string) => {
+  const getWsUrl = useCallback((path: string) => {
     const baseWsUrl = process.env.NEXT_PUBLIC_WS_BASE_URL || 'ws://localhost:8000';
     const token = tokenData?.access;
     const url = `${baseWsUrl}${path}`;
@@ -79,7 +81,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
     }
     
     return url;
-  };
+  }, [tokenData?.access]);
 
   // Check for active chat
   const checkActiveChat = useCallback(async () => {
@@ -161,7 +163,75 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
     } catch (error) {
       console.error('Error checking active chat:', error);
     }
-  }, [tokenData]);
+  }, [tokenData, getWsUrl]);
+
+  // Connect to a specific chat by id
+  const connectToChatById = useCallback(async (chatId: string) => {
+    if (!tokenData) return 'error';
+    try {
+      // Fetch chat details first
+      const chatResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/chat/${chatId}/`, {
+        headers: {
+          'Authorization': `Bearer ${tokenData.access}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (chatResponse.status === 404) return 'not_found';
+      if (chatResponse.status === 403) return 'forbidden';
+      if (!chatResponse.ok) return 'error';
+
+      const chatData = await chatResponse.json();
+      setCurrentChat(chatData);
+
+      // Connect to chat WebSocket
+      const wsUrl = getWsUrl(`/ws/chat/${chatId}/`);
+      const ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        setIsChatConnected(true);
+      };
+
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+
+        switch (data.type) {
+          case 'message':
+            setCurrentChat(prev => prev ? {
+              ...prev,
+              messages: [...prev.messages, data as ChatMessage]
+            } : null);
+            break;
+
+          case 'chat_ended':
+            setCurrentChat(null);
+            if (chatWsRef.current) {
+              chatWsRef.current.close();
+              chatWsRef.current = null;
+            }
+            setIsChatConnected(false);
+            break;
+
+          default:
+            // ignore
+        }
+      };
+
+      ws.onerror = () => {
+        setIsChatConnected(false);
+      };
+
+      ws.onclose = () => {
+        setIsChatConnected(false);
+        chatWsRef.current = null;
+      };
+
+      chatWsRef.current = ws;
+      return 'connected';
+  } catch {
+      return 'error';
+    }
+  }, [tokenData, getWsUrl]);
 
   // Connect to queue WebSocket
   useEffect(() => {
@@ -203,6 +273,9 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
         switch (data.type) {
           case 'queue_status':
             setQueueStatus(data);
+            if (typeof data.is_in_queue === 'boolean') {
+              setIsInQueue(data.is_in_queue);
+            }
             break;
             
           case 'chat_matched':
@@ -217,6 +290,15 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
             break;
             
           case 'error':
+            // Handle expected non-fatal queue states gracefully
+            if (data.message === 'Already in queue') {
+              setIsInQueue(true);
+              // Ask server for fresh status to sync counts
+              if (queueWsRef.current && queueWsRef.current.readyState === WebSocket.OPEN) {
+                queueWsRef.current.send(JSON.stringify({ action: 'check_status' }));
+              }
+              break;
+            }
             console.error('Queue error:', data.message);
             break;
             
@@ -258,7 +340,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
         chatWsRef.current = null;
       }
     };
-  }, [user, tokenData, checkActiveChat]);
+  }, [user, tokenData, checkActiveChat, getWsUrl]);
 
   // Queue actions
   const joinQueue = useCallback(() => {
@@ -300,6 +382,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
     isConnectedToChat: isChatConnected,
     sendMessage,
     endChat,
+  connectToChatById,
     isQueueConnected,
     isChatConnected,
     checkActiveChat,
