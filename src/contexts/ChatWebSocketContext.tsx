@@ -339,8 +339,22 @@ export const ChatWebSocketProvider: React.FC<ChatWebSocketProviderProps> = ({ ch
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       console.log('Ending chat...');
       wsRef.current.send(JSON.stringify({ action: 'end_chat' }));
+      
+      // Immediately handle chat end for current user
+      setCurrentChat(null);
+      
+      // Close the WebSocket connection
+      wsRef.current.close(1000, 'Chat ended by user');
+      wsRef.current = null;
+      setIsConnected(false);
+      clearTimers();
+      
+      // Notify parent components
+      window.dispatchEvent(new CustomEvent('chatEnded', { 
+        detail: { reason: 'ended_by_user' } 
+      }));
     }
-  }, []);
+  }, [clearTimers]);
 
   // Auto-disconnect when user logs out
   useEffect(() => {

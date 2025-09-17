@@ -85,6 +85,17 @@ export default function ChatComponent() {
     };
   }, [chatId, currentChat, isChatConnected, router, deadChat]); // Removed connectToChat to prevent infinite loop
 
+  // Handle chat ending - redirect when chat becomes null due to ending
+  useEffect(() => {
+    if (!currentChat && isEnding) {
+      // Chat was ended by user, redirect after a short delay
+      const timer = setTimeout(() => {
+        router.replace('/queue');
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [currentChat, isEnding, router]);
+
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
 
