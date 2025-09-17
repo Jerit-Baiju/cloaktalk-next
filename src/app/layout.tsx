@@ -1,6 +1,4 @@
 import { AccessControlWrapper } from "@/components/AccessControlWrapper";
-import PWAInstallPrompt from "@/components/PWAInstallPrompt";
-import PWAUpdateNotification from "@/components/PWAUpdateNotification";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ChatWebSocketProvider } from "@/contexts/ChatWebSocketContext";
 import { QueueWebSocketProvider } from "@/contexts/QueueWebSocketContext";
@@ -80,8 +78,6 @@ export default function RootLayout({
             </ChatWebSocketProvider>
           </QueueWebSocketProvider>
         </AuthProvider>
-        <PWAInstallPrompt />
-        <PWAUpdateNotification />
       </body>
     </html>
   );
