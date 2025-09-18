@@ -24,7 +24,7 @@ export default function QueueComponent() {
   const { currentChat } = useChatWebSocket();
   const router = useRouter();
   const [isJoining, setIsJoining] = useState(false);
-  const [activity, setActivity] = useState<{ active_chats: number; waiting_count: number; college?: string } | null>(null);
+  const [activity, setActivity] = useState<{ active_chats: number; waiting_count: number; registered_students: number; college?: string } | null>(null);
   const autoJoinAttempted = useRef(false);
 
   // Redirect to chat if user has an active chat
@@ -79,13 +79,14 @@ export default function QueueComponent() {
     let interval: NodeJS.Timeout | null = null;
     const fetchActivity = async () => {
       try {
-        const res = await get<{ college: string; college_id: number; active_chats: number; waiting_count: number }>(
+        const res = await get<{ college: string; college_id: number; active_chats: number; waiting_count: number; registered_students: number }>(
           '/api/college/activity/'
         );
         if (res.data) {
           setActivity({
             active_chats: res.data.active_chats,
             waiting_count: res.data.waiting_count,
+            registered_students: res.data.registered_students,
             college: res.data.college,
           });
         }
@@ -174,9 +175,9 @@ export default function QueueComponent() {
                   </div>
                 </div>
                 <div className="rounded-xl bg-neutral-900 border border-neutral-800 px-4 py-3">
-                  <div className="text-[11px] uppercase tracking-wider text-neutral-500">Waiting</div>
+                  <div className="text-[11px] uppercase tracking-wider text-neutral-500">Registered</div>
                   <div className="mt-1 text-2xl font-semibold text-neutral-200">
-                    {queueStatus ? queueStatus.waiting_count : activity ? activity.waiting_count : '—'}
+                    {activity ? activity.registered_students : '—'}
                   </div>
                 </div>
                 <div className="rounded-xl bg-neutral-900 border border-neutral-800 px-4 py-3 hidden sm:block">
