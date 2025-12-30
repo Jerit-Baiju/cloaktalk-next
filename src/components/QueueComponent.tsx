@@ -117,21 +117,6 @@ export default function QueueComponent() {
     );
   }
 
-  if (!user.college) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-neutral-950 text-neutral-300">
-        <div className="max-w-md mx-auto bg-neutral-900 border border-neutral-800 rounded-xl p-6 text-center">
-          <div className="w-16 h-16 mx-auto mb-4 bg-yellow-500/15 rounded-full flex items-center justify-center">
-            <svg className="w-8 h-8 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 18.5c-.77.833.192 2.5 1.732 2.5z" />
-            </svg>
-          </div>
-          <h3 className="text-lg font-semibold text-neutral-100 mb-2">No College Assigned</h3>
-          <p className="text-neutral-400">You need to be assigned to a college to join the queue.</p>
-        </div>
-      </div>
-    );
-  }
 
   const windowClosed = !canAccess && accessData?.reason === 'outside_window';
 
@@ -164,7 +149,7 @@ export default function QueueComponent() {
           <div className="bg-neutral-900/70 border border-neutral-800 rounded-2xl p-6 backdrop-blur mb-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <h2 className="text-xl font-semibold tracking-tight text-neutral-50">{user.college?.name}</h2>
+                <h2 className="text-xl font-semibold tracking-tight text-neutral-50">{user.college?.name || 'Service Account'}</h2>
                 <p className="text-neutral-400 text-sm">Campus activity</p>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
