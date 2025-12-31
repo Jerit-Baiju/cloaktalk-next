@@ -62,7 +62,8 @@ export default function QueueComponent() {
   // Reset joining state when queue status changes
   useEffect(() => {
     if (queueStatus && isJoining) {
-      setIsJoining(false);
+      const t = setTimeout(() => setIsJoining(false), 0);
+      return () => clearTimeout(t);
     }
   }, [queueStatus, isJoining]);
 
@@ -70,7 +71,10 @@ export default function QueueComponent() {
   useEffect(() => {
     if (!autoJoinAttempted.current && isQueueConnected && canAccess && !isInQueue) {
       autoJoinAttempted.current = true;
-      handleJoinQueue();
+      const t = setTimeout(() => {
+        handleJoinQueue();
+      }, 0);
+      return () => clearTimeout(t);
     }
   }, [isQueueConnected, canAccess, isInQueue, handleJoinQueue]);
 

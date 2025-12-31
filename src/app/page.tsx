@@ -67,7 +67,7 @@ export default function Home() {
               <div>
                 {accessData.reason === 'outside_window' && (
                   <>
-                    You’re early — opens{' '}
+                    <span className="text-neutral-100 font-medium">{accessData.college_name || 'Your campus'}</span> enters the cloak between{' '}
                     <span className="text-neutral-100 font-medium">
                       {accessData.window_start?.slice(0, 5)} – {accessData.window_end?.slice(0, 5)}
                     </span>
@@ -133,31 +133,15 @@ export default function Home() {
                   <span className="w-2 h-2 rounded-full bg-neutral-600" /> Window Closed
                 </div>
                 <p className="text-neutral-400 text-sm max-w-sm leading-relaxed">
-                  CloakTalk opens nightly from{' '}
+                  <span className="text-neutral-200 font-medium">{accessData?.college_name || 'Your campus'}</span> enters the cloak between{' '}
                   <span className="text-neutral-200 font-medium">
-                    {accessData?.window_start?.slice(0, 5) || '20:00'} - {accessData?.window_end?.slice(0, 5) || '21:00'}
+                    {accessData?.window_start?.slice(0, 5) || '20:00'} – {accessData?.window_end?.slice(0, 5) || '21:00'}
                   </span>{' '}
-                  local time.
+                  each night.
                 </p>
               </div>
             </div>
           )}
-
-          {/* Micro value props */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-10 text-[11px] text-neutral-500">
-            <div className="flex items-center gap-2 justify-center">
-              <span className="text-neutral-300">🔒</span> No profiles
-            </div>
-            <div className="flex items-center gap-2 justify-center">
-              <span className="text-neutral-300">🎓</span> Campus only
-            </div>
-            <div className="flex items-center gap-2 justify-center">
-              <span className="text-neutral-300">⚡</span> Instant pairing
-            </div>
-            <div className="flex items-center gap-2 justify-center">
-              <span className="text-neutral-300">🕘</span> 1 hour focus
-            </div>
-          </div>
 
           <p className="pt-8 text-[11px] text-neutral-600 max-w-xs mx-auto leading-relaxed">
             Be respectful. Conversations are ephemeral and lightly moderated for safety.

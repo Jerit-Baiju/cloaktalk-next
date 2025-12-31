@@ -257,14 +257,17 @@ export const QueueWebSocketProvider: React.FC<QueueWebSocketProviderProps> = ({ 
 
   // Auto-connect when user is authenticated
   useEffect(() => {
-    if (user && tokenData) {
-      connect();
-    } else {
-      disconnect();
-    }
+    const t = setTimeout(() => {
+      if (user && tokenData) {
+        connect();
+      } else {
+        disconnect();
+      }
+    }, 0);
 
     // Cleanup on unmount
     return () => {
+      clearTimeout(t);
       disconnect();
     };
   }, [user, tokenData]); // Removed connect and disconnect to prevent infinite loop

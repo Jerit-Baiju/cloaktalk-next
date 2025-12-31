@@ -40,7 +40,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       content: 'Hey! I\'m in the same major as you. Want to study together for the midterm? 📚',
       senderId: 'user2',
       senderName: 'StudyBuddy',
-      timestamp: new Date(Date.now() - 300000), // 5 minutes ago
+      timestamp: new Date('2025-01-01T00:00:00.000Z'),
       isMe: false,
     },
     {
@@ -48,7 +48,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       content: 'Absolutely! This anonymous feature makes it so much easier to reach out. Library at 3pm? ✨',
       senderId: 'user1',
       senderName: 'You',
-      timestamp: new Date(Date.now() - 120000), // 2 minutes ago
+      timestamp: new Date('2025-01-01T00:03:00.000Z'),
       isMe: true,
     },
     {
@@ -56,7 +56,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       content: 'Perfect! I love how safe this app feels for making new connections 🛡️',
       senderId: 'user2',
       senderName: 'StudyBuddy',
-      timestamp: new Date(Date.now() - 30000), // 30 seconds ago
+      timestamp: new Date('2025-01-01T00:04:30.000Z'),
       isMe: false,
     },
   ]);

@@ -97,7 +97,7 @@ export const AccessControlProvider: React.FC<AccessControlProviderProps> = ({
         'Content-Type': 'application/json',
       };
       
-      const response = await get<CollegeStatusResponse>('/college/status/', { headers });
+      const response = await get<CollegeStatusResponse>('/api/college/status/', { headers });
       if (response.data) {
         setCollegeStatus(response.data);
       }

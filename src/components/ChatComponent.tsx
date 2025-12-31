@@ -63,6 +63,7 @@ export default function ChatComponent() {
   useEffect(() => {
     let timer: NodeJS.Timeout | null = null;
     let countdown: NodeJS.Timeout | null = null;
+    let resetSecondsTimer: NodeJS.Timeout | null = null;
     const run = async () => {
       if (!currentChat && chatId && connectToChatRef.current) {
         const result = await connectToChatRef.current(chatId);
@@ -75,11 +76,13 @@ export default function ChatComponent() {
 
     // If dead chat detected or chat ended, schedule redirect
     if (deadChat || (!currentChat && !isChatConnected && chatId)) {
-      setRedirectSeconds(3); // Reset to 3 seconds
+      // Avoid synchronous state updates directly inside an effect
+      resetSecondsTimer = setTimeout(() => setRedirectSeconds(3), 0);
       timer = setTimeout(() => router.replace('/queue'), 3000);
       countdown = setInterval(() => setRedirectSeconds((s) => (s > 1 ? s - 1 : 0)), 1000);
     }
     return () => {
+      if (resetSecondsTimer) clearTimeout(resetSecondsTimer);
       if (timer) clearTimeout(timer);
       if (countdown) clearInterval(countdown);
     };

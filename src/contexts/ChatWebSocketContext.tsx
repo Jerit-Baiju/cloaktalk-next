@@ -359,7 +359,8 @@ export const ChatWebSocketProvider: React.FC<ChatWebSocketProviderProps> = ({ ch
   // Auto-disconnect when user logs out
   useEffect(() => {
     if (!user || !tokenData) {
-      disconnect();
+      const t = setTimeout(() => disconnect(), 0);
+      return () => clearTimeout(t);
     }
   }, [user, tokenData, disconnect]);
 

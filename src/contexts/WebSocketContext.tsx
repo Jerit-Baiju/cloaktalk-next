@@ -244,6 +244,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
   // Connect to queue WebSocket
   useEffect(() => {
     if (!user || !tokenData) {
+      const t = setTimeout(() => {
       // Cleanup when user logs out
       if (queueWsRef.current) {
         queueWsRef.current.close();
@@ -258,7 +259,8 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
       setIsInQueue(false);
       setIsQueueConnected(false);
       setIsChatConnected(false);
-      return;
+      }, 0);
+      return () => clearTimeout(t);
     }
 
     if (queueWsRef.current) return; // Already connected
@@ -335,10 +337,13 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
     };
 
     connectToQueue();
-    checkActiveChat();
+    const t = setTimeout(() => {
+      checkActiveChat();
+    }, 0);
 
     // Cleanup on unmount or dependency change
     return () => {
+      clearTimeout(t);
       if (queueWsRef.current) {
         queueWsRef.current.close();
         queueWsRef.current = null;
