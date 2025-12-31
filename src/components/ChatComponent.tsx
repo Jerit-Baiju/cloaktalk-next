@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuth } from '@/contexts/AuthContext';
-import { ChatMessage, useChatWebSocket } from '@/contexts/ChatWebSocketContext';
+import { ChatMessage, useMainWebSocket } from '@/contexts/SocketContext';
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -26,13 +26,12 @@ export default function ChatComponent() {
     currentChat,
     sendMessage,
     endChat,
-    isConnected: isChatConnected,
-    connectToChat,
+    isConnected,
+    joinChat,
     otherUserTyping,
     startTyping,
     stopTyping,
-    participantStatuses,
-  } = useChatWebSocket();
+  } = useMainWebSocket();
   const params = useParams();
   const chatId = useMemo(() => (params?.uuid as string) || '', [params]);
   const router = useRouter();
@@ -42,12 +41,7 @@ export default function ChatComponent() {
   const [redirectSeconds, setRedirectSeconds] = useState(3);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const connectToChatRef = useRef<typeof connectToChat | null>(null);
-
-  // Keep the ref updated with the latest connectToChat function
-  useEffect(() => {
-    connectToChatRef.current = connectToChat;
-  }, [connectToChat]);
+  const joinAttempted = useRef(false);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -59,50 +53,45 @@ export default function ChatComponent() {
     inputRef.current?.focus();
   }, []);
 
-  // Attempt to connect to chat by URL id when arriving directly
+  // Attempt to join chat if not already in it
   useEffect(() => {
-    let timer: NodeJS.Timeout | null = null;
-    let countdown: NodeJS.Timeout | null = null;
-    let resetSecondsTimer: NodeJS.Timeout | null = null;
-    const run = async () => {
-      if (!currentChat && chatId && connectToChatRef.current) {
-        const result = await connectToChatRef.current(chatId);
-        if (result === 'not_found' || result === 'forbidden') {
-          setDeadChat(result);
-        }
-      }
-    };
-    run();
-
-    // If dead chat detected or chat ended, schedule redirect
-    if (deadChat || (!currentChat && !isChatConnected && chatId)) {
-      // Avoid synchronous state updates directly inside an effect
-      resetSecondsTimer = setTimeout(() => setRedirectSeconds(3), 0);
-      timer = setTimeout(() => router.replace('/queue'), 3000);
-      countdown = setInterval(() => setRedirectSeconds((s) => (s > 1 ? s - 1 : 0)), 1000);
+    if (!joinAttempted.current && chatId && isConnected && !currentChat) {
+      joinAttempted.current = true;
+      joinChat(chatId);
     }
-    return () => {
-      if (resetSecondsTimer) clearTimeout(resetSecondsTimer);
-      if (timer) clearTimeout(timer);
-      if (countdown) clearInterval(countdown);
-    };
-  }, [chatId, currentChat, isChatConnected, router, deadChat]); // Removed connectToChat to prevent infinite loop
+  }, [chatId, isConnected, currentChat, joinChat]);
 
   // Handle chat ending - redirect when chat becomes null due to ending
   useEffect(() => {
-    if (!currentChat && isEnding) {
-      // Chat was ended by user, redirect after a short delay
-      const timer = setTimeout(() => {
-        router.replace('/queue');
-      }, 3000);
-      return () => clearTimeout(timer);
+    const handleChatEnded = () => {
+      setDeadChat('ended');
+    };
+
+    window.addEventListener('chatEnded', handleChatEnded as EventListener);
+    return () => window.removeEventListener('chatEnded', handleChatEnded as EventListener);
+  }, []);
+
+  // Redirect on dead chat
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    let countdown: NodeJS.Timeout | null = null;
+
+    if (deadChat || isEnding) {
+      setRedirectSeconds(3);
+      timer = setTimeout(() => router.replace('/queue'), 3000);
+      countdown = setInterval(() => setRedirectSeconds((s) => (s > 1 ? s - 1 : 0)), 1000);
     }
-  }, [currentChat, isEnding, router]);
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      if (countdown) clearInterval(countdown);
+    };
+  }, [deadChat, isEnding, router]);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (messageInput.trim() && isChatConnected) {
+    if (messageInput.trim() && isConnected) {
       sendMessage(messageInput.trim());
       setMessageInput('');
     }
@@ -112,7 +101,7 @@ export default function ChatComponent() {
     setMessageInput(e.target.value);
 
     // Start typing indicator when user starts typing
-    if (e.target.value.trim() && isChatConnected) {
+    if (e.target.value.trim() && isConnected) {
       startTyping();
     } else if (!e.target.value.trim()) {
       stopTyping();
@@ -120,13 +109,11 @@ export default function ChatComponent() {
   };
 
   const handleInputBlur = () => {
-    // Stop typing when input loses focus
     stopTyping();
   };
 
-  const handleEndChat = async () => {
+  const handleEndChat = () => {
     setIsEnding(true);
-    // send end event, but stay on page showing confirmation and controls
     endChat();
   };
 
@@ -163,7 +150,7 @@ export default function ChatComponent() {
           )}
           <h3 className='text-lg font-semibold text-neutral-100 mb-2'>{title}</h3>
           <p className='text-neutral-400'>{desc}</p>
-          {(deadChat || (!isChatConnected && chatId)) && (
+          {(deadChat || (!isConnected && chatId)) && (
             <div className='mt-4 text-sm text-neutral-400'>Redirecting to queue in {redirectSeconds}s…</div>
           )}
           <button
@@ -182,22 +169,13 @@ export default function ChatComponent() {
       <div className='bg-neutral-900/70 border-b border-neutral-800 px-4 py-3 flex items-center justify-between'>
         <div className='flex items-center'>
           <img className='h-12' src={`https://api.dicebear.com/9.x/personas/svg?seed=${chatId}`} alt='' />
-          {/* Online status indicator */}
           <div>
             <h1 className='text-lg font-semibold text-neutral-100'>Anonymous Chat</h1>
-            <p className='text-sm text-neutral-400'>
-              {currentChat.college}
-              {participantStatuses.length > 0 && (
-                <span className='ml-2'>
-                  • {participantStatuses.some((p) => p.user_id !== user?.id?.toString() && p.is_online) ? 'Online' : 'Offline'}
-                </span>
-              )}
-            </p>
+            <p className='text-sm text-neutral-400'>{currentChat.college}</p>
           </div>
         </div>
 
         <div className='flex items-center space-x-2'>
-          {/* End Chat Button */}
           {!isEnding ? (
             <button
               onClick={handleEndChat}
@@ -283,11 +261,10 @@ export default function ChatComponent() {
               onChange={handleInputChange}
               onBlur={handleInputBlur}
               placeholder='Type your message...'
-              disabled={!isChatConnected}
+              disabled={!isConnected}
               className='w-full px-4 py-2 border border-neutral-800 rounded-lg bg-neutral-950 text-neutral-100 placeholder:text-neutral-600 focus:ring-2 focus:ring-pink-500 focus:border-transparent disabled:bg-neutral-900 disabled:text-neutral-500 disabled:cursor-not-allowed'
               maxLength={500}
             />
-            {/* Typing indicator */}
             {otherUserTyping && (
               <div className='absolute -top-8 left-4 text-xs text-neutral-400 bg-neutral-900 px-2 py-1 rounded'>
                 Other user is typing...
@@ -296,7 +273,7 @@ export default function ChatComponent() {
           </div>
           <button
             type='submit'
-            disabled={!messageInput.trim() || !isChatConnected}
+            disabled={!messageInput.trim() || !isConnected}
             className='bg-pink-600 hover:bg-pink-700 disabled:bg-neutral-800 disabled:text-neutral-500 text-white px-6 py-2 rounded-lg font-medium transition-colors'>
             <svg className='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
               <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M12 19l9 2-9-18-9 18 9-2zm0 0v-8' />
@@ -304,7 +281,6 @@ export default function ChatComponent() {
           </button>
         </form>
 
-        {/* Character count */}
         <div className='flex justify-between items-center mt-2 text-xs text-neutral-500'>
           <p>Messages are anonymous and private</p>
           <p>{messageInput.length}/500</p>

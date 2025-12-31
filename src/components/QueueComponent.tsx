@@ -1,30 +1,24 @@
 'use client';
 
-import { useAccessControl } from '@/contexts/AccessControlContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { useChatWebSocket } from '@/contexts/ChatWebSocketContext';
-import { useQueueWebSocket } from '@/contexts/QueueWebSocketContext';
-import { useAxios } from '@/lib/useAxios';
+import { useMainWebSocket } from '@/contexts/SocketContext';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 export default function QueueComponent() {
   const { user } = useAuth();
-  const { canAccess, accessData } = useAccessControl();
-  const { get } = useAxios();
   const {
-    queueStatus,
+    access,
+    activity,
     isInQueue,
     joinQueue,
     leaveQueue,
-    isConnected: isQueueConnected,
-    onlineUsers,
-  } = useQueueWebSocket();
-  const { currentChat } = useChatWebSocket();
+    currentChat,
+    isConnected,
+  } = useMainWebSocket();
   const router = useRouter();
   const [isJoining, setIsJoining] = useState(false);
-  const [activity, setActivity] = useState<{ active_chats: number; waiting_count: number; registered_students: number; college?: string } | null>(null);
   const autoJoinAttempted = useRef(false);
 
   // Redirect to chat if user has an active chat
@@ -34,7 +28,7 @@ export default function QueueComponent() {
     }
   }, [currentChat, router]);
 
-  // Listen for chat matched events from queue WebSocket
+  // Listen for chat matched events from WebSocket
   useEffect(() => {
     const handleChatMatched = (event: CustomEvent) => {
       const { chatId } = event.detail;
@@ -48,10 +42,9 @@ export default function QueueComponent() {
     return () => window.removeEventListener('chatMatched', handleChatMatched as EventListener);
   }, [router]);
 
-  const handleJoinQueue = useCallback(async () => {
+  const handleJoinQueue = useCallback(() => {
     setIsJoining(true);
     joinQueue();
-    // The isJoining state will be reset when we get the queue status update
   }, [joinQueue]);
 
   const handleLeaveQueue = () => {
@@ -61,52 +54,18 @@ export default function QueueComponent() {
 
   // Reset joining state when queue status changes
   useEffect(() => {
-    if (queueStatus && isJoining) {
-      const t = setTimeout(() => setIsJoining(false), 0);
-      return () => clearTimeout(t);
+    if (isInQueue || !isJoining) {
+      setIsJoining(false);
     }
-  }, [queueStatus, isJoining]);
+  }, [isInQueue, isJoining]);
 
   // Auto-join queue on load when connected and within access window
   useEffect(() => {
-    if (!autoJoinAttempted.current && isQueueConnected && canAccess && !isInQueue) {
+    if (!autoJoinAttempted.current && isConnected && access?.can_access && !isInQueue) {
       autoJoinAttempted.current = true;
-      const t = setTimeout(() => {
-        handleJoinQueue();
-      }, 0);
-      return () => clearTimeout(t);
+      handleJoinQueue();
     }
-  }, [isQueueConnected, canAccess, isInQueue, handleJoinQueue]);
-
-  // Fetch college activity (active chats + waiting) and refresh periodically
-  useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-    const fetchActivity = async () => {
-      try {
-        const res = await get<{ college: string; college_id: number; active_chats: number; waiting_count: number; registered_students: number }>(
-          '/api/college/activity/'
-        );
-        if (res.data) {
-          setActivity({
-            active_chats: res.data.active_chats,
-            waiting_count: res.data.waiting_count,
-            registered_students: res.data.registered_students,
-            college: res.data.college,
-          });
-        }
-  } catch {
-        // ignore transient errors
-      }
-    };
-
-    if (user) {
-      fetchActivity();
-      interval = setInterval(fetchActivity, 15000);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [user, get]);
+  }, [isConnected, access?.can_access, isInQueue, handleJoinQueue]);
 
   if (!user) {
     return (
@@ -121,8 +80,8 @@ export default function QueueComponent() {
     );
   }
 
-
-  const windowClosed = !canAccess && accessData?.reason === 'outside_window';
+  const canAccess = access?.can_access ?? false;
+  const windowClosed = !canAccess && access?.reason === 'outside_window';
 
   return (
     <div className="min-h-dvh relative overflow-x-hidden bg-neutral-950 text-neutral-100 selection:bg-pink-500/30">
@@ -160,19 +119,19 @@ export default function QueueComponent() {
                 <div className="rounded-xl bg-neutral-900 border border-neutral-800 px-4 py-3">
                   <div className="text-[11px] uppercase tracking-wider text-neutral-500">Chatting now</div>
                   <div className="mt-1 text-2xl font-semibold text-pink-300">
-                    {activity ? activity.active_chats : '—'}
+                    {activity?.active_chats ?? '—'}
                   </div>
                 </div>
                 <div className="rounded-xl bg-neutral-900 border border-neutral-800 px-4 py-3">
                   <div className="text-[11px] uppercase tracking-wider text-neutral-500">Registered</div>
                   <div className="mt-1 text-2xl font-semibold text-neutral-200">
-                    {activity ? activity.registered_students : '—'}
+                    {activity?.registered_students ?? '—'}
                   </div>
                 </div>
                 <div className="rounded-xl bg-neutral-900 border border-neutral-800 px-4 py-3 hidden sm:block">
                   <div className="text-[11px] uppercase tracking-wider text-neutral-500">Window</div>
                   <div className="mt-1 text-sm font-medium text-neutral-300">
-                    {accessData?.window_start?.slice(0,5)}–{accessData?.window_end?.slice(0,5)}
+                    {access?.window_start?.slice(0, 5)}–{access?.window_end?.slice(0, 5)}
                   </div>
                 </div>
               </div>
@@ -187,7 +146,7 @@ export default function QueueComponent() {
                   <span className="w-2 h-2 rounded-full bg-neutral-600" /> Window Closed
                 </div>
                 <p className="text-neutral-400 text-sm">
-                  Opens {accessData?.window_start?.slice(0,5)} – {accessData?.window_end?.slice(0,5)} local time.
+                  Opens {access?.window_start?.slice(0, 5)} – {access?.window_end?.slice(0, 5)} local time.
                 </p>
               </div>
             ) : (
@@ -196,7 +155,7 @@ export default function QueueComponent() {
                   <div className="max-w-sm mx-auto">
                     <button
                       onClick={handleJoinQueue}
-                      disabled={isJoining || !isQueueConnected}
+                      disabled={isJoining || !isConnected}
                       className="group relative overflow-hidden rounded-full w-full px-8 py-3.5 text-sm font-medium tracking-wide focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950 disabled:opacity-60"
                     >
                       <span className="absolute inset-0 bg-linear-to-r from-pink-500 via-rose-500 to-fuchsia-500 opacity-90 group-hover:opacity-100 transition-opacity" />
@@ -215,14 +174,14 @@ export default function QueueComponent() {
                         )}
                       </span>
                     </button>
-                    <p className="mt-3 text-xs text-neutral-500">You’ll be redirected to chat automatically once matched.</p>
+                    <p className="mt-3 text-xs text-neutral-500">You'll be redirected to chat automatically once matched.</p>
                   </div>
                 ) : (
                   <div className="space-y-5 max-w-md mx-auto">
                     <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 text-left">
                       <div className="flex items-center gap-2 text-neutral-300">
                         <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse" />
-                        <span className="text-sm font-medium">You’re in the queue</span>
+                        <span className="text-sm font-medium">You're in the queue</span>
                       </div>
                       <p className="mt-1 text-neutral-500 text-sm">Waiting for a match from {user.college?.name}…</p>
                     </div>

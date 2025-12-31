@@ -27,19 +27,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (storedTokenData) {
           const parsedTokenData: TokenData = JSON.parse(storedTokenData);
           
+          // Always set the token data first (optimistic)
+          setTokenData(parsedTokenData);
+          
           // Validate token by fetching user data
-          if (await validateAndFetchUser(parsedTokenData)) {
-            setTokenData(parsedTokenData);
-          } else {
-            // Token is invalid, clear it
+          const validationResult = await validateAndFetchUser(parsedTokenData);
+          
+          if (validationResult === false) {
+            // Token is definitively invalid (401 response), clear it
             localStorage.removeItem('tokenData');
             setTokenData(null);
             setUser(null);
           }
+          // If null (network error), keep the tokens and user will be logged in
+          // The validation will be retried when the backend comes back online
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
-        // Clear corrupted data
+        // Only clear if data is corrupted (JSON parse error)
         localStorage.removeItem('tokenData');
         setTokenData(null);
         setUser(null);
@@ -52,7 +57,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   // Function to validate token and fetch user data
-  const validateAndFetchUser = async (tokens: TokenData): Promise<boolean> => {
+  // Returns: true = valid token, false = invalid/expired token, null = network error (keep token)
+  const validateAndFetchUser = async (tokens: TokenData): Promise<boolean | null> => {
     try {
       // Temporarily set tokens to make authenticated request
       const tempResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/user/`, {
@@ -70,15 +76,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Token might be expired, try to refresh
         return await refreshTokenAndFetchUser(tokens);
       }
-      return false;
+      // Other error statuses (500, etc.) - keep the token, just log the error
+      console.warn('Server returned non-401 error:', tempResponse.status);
+      return null;
     } catch (error) {
-      console.error('Error validating token:', error);
-      return false;
+      // Network error (backend offline, no internet, etc.) - keep the token
+      console.warn('Network error during token validation (backend may be offline):', error);
+      return null;
     }
   };
 
   // Function to refresh token and fetch user data
-  const refreshTokenAndFetchUser = async (tokens: TokenData): Promise<boolean> => {
+  // Returns: true = refreshed successfully, false = refresh failed (expired), null = network error
+  const refreshTokenAndFetchUser = async (tokens: TokenData): Promise<boolean | null> => {
     try {
       const refreshResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/token/refresh/`, {
         method: 'POST',
@@ -100,12 +110,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setTokenData(newTokenData);
 
         // Fetch user data with new token
-        return await validateAndFetchUser(newTokenData);
+        const userFetchResult = await validateAndFetchUser(newTokenData);
+        // If user fetch returns null (network error), we still refreshed the token successfully
+        return userFetchResult === null ? true : userFetchResult;
+      } else if (refreshResponse.status === 401) {
+        // Refresh token is expired or invalid
+        return false;
       }
-      return false;
+      // Other server errors - keep tokens
+      return null;
     } catch (error) {
-      console.error('Error refreshing token:', error);
-      return false;
+      // Network error - keep tokens
+      console.warn('Network error during token refresh (backend may be offline):', error);
+      return null;
     }
   };
 
@@ -131,11 +148,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (!tokenData) return;
 
     const validateTokenPeriodically = async () => {
-      const isValid = await validateAndFetchUser(tokenData);
-      if (!isValid) {
-        // Token is invalid, log out user
+      const validationResult = await validateAndFetchUser(tokenData);
+      // Only logout if token is definitively invalid (false), not on network errors (null)
+      if (validationResult === false) {
+        console.log('Token expired, logging out user');
         logout();
       }
+      // If null (network error), keep user logged in and retry next time
     };
 
     // Set up periodic validation
@@ -196,7 +215,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (!tokenData) return;
     
     try {
-      await validateAndFetchUser(tokenData);
+      const validationResult = await validateAndFetchUser(tokenData);
+      // Only logout on definitive token expiration, not network errors
+      if (validationResult === false) {
+        logout();
+      }
     } catch (error) {
       console.error('Error refreshing user data:', error);
     }

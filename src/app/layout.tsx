@@ -1,8 +1,5 @@
-import { AccessControlWrapper } from "@/components/AccessControlWrapper";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { ChatWebSocketProvider } from "@/contexts/ChatWebSocketContext";
-import { QueueWebSocketProvider } from "@/contexts/QueueWebSocketContext";
-import { WebSocketManagerProvider } from "@/contexts/WebSocketManagerContext";
+import { MainWebSocketProvider } from "@/contexts/SocketContext";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -68,17 +65,12 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>
-          <QueueWebSocketProvider>
-            <ChatWebSocketProvider>
-              <WebSocketManagerProvider>
-                <AccessControlWrapper>
-                  {children}
-                </AccessControlWrapper>
-              </WebSocketManagerProvider>
-            </ChatWebSocketProvider>
-          </QueueWebSocketProvider>
+          <MainWebSocketProvider>
+            {children}
+          </MainWebSocketProvider>
         </AuthProvider>
       </body>
     </html>
   );
 }
+
