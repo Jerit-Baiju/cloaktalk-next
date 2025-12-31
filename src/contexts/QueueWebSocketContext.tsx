@@ -138,17 +138,26 @@ export const QueueWebSocketProvider: React.FC<QueueWebSocketProviderProps> = ({ 
 
         case 'user_joined_queue':
           console.log('User joined queue:', data);
-          // Refresh status to get updated counts
-          if (ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ action: 'check_status' }));
+          // Update queue status if provided in the response
+          if (data.waiting_count !== undefined) {
+            setQueueStatus(prev => prev ? {
+              ...prev,
+              waiting_count: data.waiting_count
+            } : null);
           }
           break;
 
         case 'user_left_queue':
           console.log('User left queue:', data);
-          // Refresh status to get updated counts
-          if (ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ action: 'check_status' }));
+          // Update state immediately without additional check_status call
+          setIsInQueue(false);
+          // Update queue status if provided in the response
+          if (data.waiting_count !== undefined) {
+            setQueueStatus(prev => prev ? {
+              ...prev,
+              waiting_count: data.waiting_count,
+              is_in_queue: false
+            } : null);
           }
           break;
 
@@ -233,6 +242,8 @@ export const QueueWebSocketProvider: React.FC<QueueWebSocketProviderProps> = ({ 
   const leaveQueue = useCallback(() => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       console.log('Leaving queue...');
+      // Optimistic update for instant UI feedback
+      setIsInQueue(false);
       wsRef.current.send(JSON.stringify({ action: 'leave_queue' }));
     }
   }, []);

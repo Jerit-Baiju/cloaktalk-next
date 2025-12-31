@@ -121,12 +121,12 @@ export default function QueueComponent() {
   const windowClosed = !canAccess && accessData?.reason === 'outside_window';
 
   return (
-    <div className="min-h-[100dvh] relative overflow-x-hidden bg-neutral-950 text-neutral-100 selection:bg-pink-500/30">
+    <div className="min-h-dvh relative overflow-x-hidden bg-neutral-950 text-neutral-100 selection:bg-pink-500/30">
       {/* Subtle radial gradients */}
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-32 -left-32 w-[45rem] h-[45rem] bg-[radial-gradient(circle_at_center,rgba(236,72,153,0.18),transparent_70%)]" />
-        <div className="absolute bottom-0 right-0 w-[40rem] h-[40rem] bg-[radial-gradient(circle_at_center,rgba(217,70,239,0.15),transparent_70%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:40px_40px] opacity-[0.07]" />
+        <div className="absolute -top-32 -left-32 w-180 h-180 bg-[radial-gradient(circle_at_center,rgba(236,72,153,0.18),transparent_70%)]" />
+        <div className="absolute bottom-0 right-0 w-160 h-160 bg-[radial-gradient(circle_at_center,rgba(217,70,239,0.15),transparent_70%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-size-[40px_40px] opacity-[0.07]" />
       </div>
 
       {/* Top bar */}
@@ -195,7 +195,7 @@ export default function QueueComponent() {
                       disabled={isJoining || !isQueueConnected}
                       className="group relative overflow-hidden rounded-full w-full px-8 py-3.5 text-sm font-medium tracking-wide focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950 disabled:opacity-60"
                     >
-                      <span className="absolute inset-0 bg-gradient-to-r from-pink-500 via-rose-500 to-fuchsia-500 opacity-90 group-hover:opacity-100 transition-opacity" />
+                      <span className="absolute inset-0 bg-linear-to-r from-pink-500 via-rose-500 to-fuchsia-500 opacity-90 group-hover:opacity-100 transition-opacity" />
                       <span className="absolute inset-0 blur-xl bg-pink-500/40 group-hover:bg-pink-500/50 transition-colors" />
                       <span className="relative flex items-center justify-center gap-2 text-neutral-50">
                         {isJoining ? (
