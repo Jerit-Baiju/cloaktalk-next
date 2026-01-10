@@ -61,10 +61,10 @@ const createAxiosInstance = (): AxiosInstance => {
               originalRequest.headers.Authorization = `Bearer ${newTokenData.access}`;
               return instance(originalRequest);
             } catch (refreshError) {
-              // Refresh failed, clear tokens and redirect to login
+              // Refresh failed, clear tokens and redirect to welcome
               localStorage.removeItem('tokenData');
               localStorage.removeItem('user');
-              window.location.href = '/login';
+              window.location.href = '/welcome';
               return Promise.reject(refreshError);
             }
           }

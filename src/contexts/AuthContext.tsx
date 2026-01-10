@@ -74,7 +74,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return true;
       } else if (tempResponse.status === 401) {
         // Token might be expired, try to refresh
-        return await refreshTokenAndFetchUser(tokens);
+        const refreshResult = await refreshTokenAndFetchUser(tokens);
+        // If refresh failed (false), logout the user
+        if (refreshResult === false) {
+          localStorage.removeItem('tokenData');
+          setTokenData(null);
+          setUser(null);
+        }
+        return refreshResult;
       }
       // Other error statuses (500, etc.) - keep the token, just log the error
       console.warn('Server returned non-401 error:', tempResponse.status);
